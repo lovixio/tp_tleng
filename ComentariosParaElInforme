@@ -1,0 +1,7 @@
+No supimos como parsear con saltos de linea asi que tomamos la decision de parsear por linea porque a efecto practicos es lo mismo
+
+Partes incrementales:
+    Metadata                      O
+    Jugadas                       X  (pueden ser varios pasos)
+    Comentarios ignorando adentro X
+    Ver dentro de los comentarios X
