@@ -8,19 +8,21 @@ tokens = (
     'CARACTERES', 
     'LCORCHETE' , 'RCORCHETE',
     'COMILLA', 'ESPACIO' , 'newline',
-    'MENOS', 'NUM', 'PUNTO'
+    'MENOS', 'NUM', 'PUNTO', 'CASILLA', 'PIEZA' , 'SLASH'
 )
 
 t_LCORCHETE = r'\['
 t_RCORCHETE = r'\]'
 
-t_CARACTERES = r'[^\s\[\]\"\d+\.\-]+'
+t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/]+'
 t_COMILLA = r'\"'
 t_ESPACIO = r'\ '
 t_MENOS = r'-'
 t_NUM = r'\d+'
 t_PUNTO = r'\.'
-
+t_PIEZA = r'[P|N|B|R|Q|K]'
+t_CASILLA = r'[a-h]'
+t_SLASH = r'\/'
 
 
 
@@ -60,20 +62,46 @@ def p_string_escritoEnLaMetaData(t):
 def p_contenido_delString(t):
     '''contenido : NUM
                  | MENOS
-                 | CARACTERES'''
+                 | CARACTERES
+                 | CASILLA
+                 | PIEZA
+                 | SLASH'''
 
 def p_partida(t): 
     'partida : jugada sigjugada'
 
 def p_jugada(t):
-    'jugada : NUM PUNTO ESPACIO'
+    '''jugada : NUM PUNTO ESPACIO movimiento movimiento'''
+    print("Jugada numero", t[1], "se jugo:", t[4], t[5])
+            
+def p_movimiento(t):
+    ''' movimiento : CASILLA NUM ESPACIO
+                   | PIEZA CASILLA NUM ESPACIO'''
     
+    t[0] = t[1] + t[2]
+    numCasilla = t[2]
+    if t[3]!=" " :
+        t[0] += t[3]
+        numCasilla = t[3]
+    
+    numCasilla = int(numCasilla)
+    if numCasilla == 0 or numCasilla >= 9:
+        p_error(t)
+
 def p_sigjugada(t):
     '''sigjugada : jugada sigjugada 
-                 | scoresimplificado'''
+                 | score'''
 
-def p_scoresimplificado(t):
-    'scoresimplificado : NUM MENOS NUM'
+def p_score_simplificado(t):
+    '''score : NUM MENOS NUM'''
+    if int(t[1]) > 1 or int(t[3]) > 1:
+        p_error(t)
+
+def p_score_fraccion(t):
+    '''score : NUM SLASH NUM MENOS NUM SLASH NUM'''
+    if not (int(t[1]) == 1 and int(t[3]) == 2 and int(t[5]) == 1 and int(t[7]) == 2) :
+        p_error(t)
+
 
 def p_error(t):
     print("Syntax error at", t)
