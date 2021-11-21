@@ -1,11 +1,11 @@
 No supimos como parsear con saltos de linea asi que tomamos la decision de parsear por linea porque a efecto practicos es lo mismo
 
 Partes incrementales:
-    Metadata                      O
-    Jugadas sin movimientos       O
-    Movimientos sin atributos     O  
-    Jugadas con atributos         O
-    Modificadores de Movimientos  X
-    Score correcto                O
+    Metadata                      O - 1
+    Jugadas sin movimientos       O - 2
+    Movimientos sin atributos     O - 3
+    Jugadas con atributos         O - 5
+    Modificadores de Movimientos  O - 6
+    Score correcto                O - 4
     Comentarios ignorando adentro X
     Ver dentro de los comentarios X
