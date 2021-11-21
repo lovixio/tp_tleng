@@ -69,10 +69,18 @@ def p_contenido_delString(t):
 
 def p_partida(t): 
     'partida : jugada sigjugada'
+    
+    if not (t[1] == 1 and (t[2] == 2 or t[2] == 0)):
+        p_error(t)
 
 def p_jugada(t):
-    '''jugada : NUM PUNTO ESPACIO movimiento movimiento'''
+    '''jugada : NUM PUNTO ESPACIO movimiento movimiento '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[5])
+    
+    t[0] = int(t[1])
+    if t[0] == 0:
+        p_error(t)
+    
             
 def p_movimiento(t):
     ''' movimiento : CASILLA NUM ESPACIO
@@ -91,20 +99,27 @@ def p_movimiento(t):
 def p_sigjugada(t):
     '''sigjugada : jugada sigjugada 
                  | score'''
+    
+    if t[1]!=0 and not (t[2] == t[1]+1 or t[2] == 0):
+        p_error(t)
+
+    t[0] = t[1]
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
+    t[0] = 0
     if int(t[1]) > 1 or int(t[3]) > 1:
         p_error(t)
 
 def p_score_fraccion(t):
     '''score : NUM SLASH NUM MENOS NUM SLASH NUM'''
+    t[0] = 0
     if not (int(t[1]) == 1 and int(t[3]) == 2 and int(t[5]) == 1 and int(t[7]) == 2) :
         p_error(t)
 
 
 def p_error(t):
-    print("Syntax error at", t)
+    print("Syntax error at", t[1])
 
 parser = yacc.yacc()
 
@@ -141,6 +156,5 @@ def customParse(s):
 
 with open('testing_text.txt', 'r') as file:
     partidas = file.read()
-#customParse(s1)
 parser.parse(partidas)
 
