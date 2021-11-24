@@ -39,13 +39,9 @@ t_LLLAVE = r'\{'
 t_RLLAVE = r'\}'
 
 class Comentario:
-    def __init__(self, mensaje):
-        self.nivel = 1
+    def __init__(self, mensaje, nivel):
+        self.nivel = nivel
         self.mensaje = mensaje
-
-    def subirNivel(self):
-        self.nivel += 1
-
 
 def t_newline(t):
     r'\n+'
@@ -102,18 +98,6 @@ def p_contenidoMeta2_delStringMeta2(t):
                       | RLLAVE'''
     t[0] = t[1]
 
-def p_stringComent_escritoEnSComentarios(t):
-    '''stringComent : contenidoComent stringComent
-                    | contenidoComent Empty'''
-    t[0] = t[1] + t[2]
-
-def p_contenidoComent_delStringComent(t):
-    '''contenidoComent : caracteresnormales Empty
-                       | ESPACIO Empty
-                       | ESPACIO comentario'''
-    t[0] = t[1] + t[2]
-
-
 def p_caracteresnormales(t):
     '''caracteresnormales : NUM
                         | MENOS
@@ -137,7 +121,6 @@ def p_partida(t):
 def p_jugada(t):
     '''jugada : NUM PUNTO ESPACIO movimiento comentario movimiento comentario '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[6])
-    
     t[0] = int(t[1])
     if t[0] == 0:
         p_error(t)
@@ -200,15 +183,32 @@ def p_mate(t):
             | MAS MAS
             | Empty '''
 
-def p_comentario(t):
-    ''' comentario : LPAREN  stringComent  RPAREN ESPACIO
-                   | LLLAVE  stringComent  RLLAVE ESPACIO
-                   | Empty Empty Empty Empty '''
-    
-    if(t[1] == ''):
-        t[0] = Comentario('')
+def p_contenidoComent_delStringComent(t):
+    '''contenidoComent : caracteresnormales Empty
+                       | ESPACIO Empty
+                       | ESPACIO comentario'''
+    if t[2] == '':
+        t[0] = Comentario(t[1], 1)
     else:
-        t[0] = Comentario(t[1] + t[2] + t[3] + t[4])
+
+        t[0] = Comentario(t[1] + t[2].mensaje, t[2].nivel + 1)
+
+def p_stringComent_escritoEnSComentarios(t):
+    '''stringComent : contenidoComent stringComent
+                    | contenidoComent Empty'''
+    if t[2] == '':
+        t[0] = t[1]
+    else:
+        t[0] = Comentario(t[2].mensaje + t[1].mensaje, t[2].nivel)
+
+def p_comentario(t):
+    ''' comentario : LPAREN stringComent RPAREN ESPACIO
+                   | LLLAVE stringComent RLLAVE ESPACIO
+                   | Empty Empty Empty Empty '''
+    if(t[1] == ''):
+        t[0] = Comentario('', 0)
+    else:
+        t[0] = Comentario(t[1] + t[2].mensaje + t[3] + t[4], t[2].nivel)
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
@@ -289,7 +289,7 @@ testsToRun.append(('''[prueba "loca"]
 1. a4! ( aisjdoaijdqoiwdj31124oqjd13jiqdjq ) Bxg5 { sakdasidasdasdi } 2. O-O h3++ 3. O-O-O { sdlajsid JUH775753DdffP-+KJ } N2d4 0-1''', 1))
 
 # Test 9: partida con comentarios dentro de comentarios
-testsToRun.append(('''[prueba "loca"]
+testsToRun.append(('''[test9 "loca"]
 1. a4! ( aisjdoaijdqoiwdj31124oqjd13jiqdjq ) Bxg5 { sakdasidasdasdi (asdjas324jsadi3j qefi) } 2. O-O h3++ 3. O-O-O { sdlajsid JUH775753DdffP-+KJ {dqdoisajd8998 { odaoausd0} sds3 (lsaks iji   ksdi) } } N2d4 0-1''', 1))
 
 # Se puede descomentar una linea en runTest para que los test sean los paths
