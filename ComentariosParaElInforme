@@ -1,19 +1,22 @@
 No supimos como parsear con saltos de linea asi que tomamos la decision de parsear por linea porque a efecto practicos es lo mismo
 
 Partes incrementales:
-    Metadata                       O - 1
-    Jugadas sin movimientos        O - 2
-    Movimientos sin atributos      O - 3
-    Jugadas con atributos          O - 5
-    Modificadores de Movimientos   O - 6
-    Score correcto                 O - 4
-    Enroque                        O - 7
-    Comentarios ignorando adentro  O - 8
-    Comentarios dentro Comentarios O - 9
-    Nivel de comentarios           O - 10
-    Ver movimientos de comentarios O - 11
-    Niveles de Comentarios sin Captura O - 12
-    Archivo puede tener varias partidas O - 13
-    Resolver Bug de espacios entre movimiento y comentario en comentraios X
-    Errores descriptivos           X
-    Niveles sin captura para todo el archivo
+    Metadata                                                                O - 1
+    Jugadas sin movimientos                                                 O - 2
+    Movimientos sin atributos                                               O - 3
+    Score correcto                                                          O - 4
+    Jugadas con atributos                                                   O - 5
+    Modificadores de Movimientos                                            O - 6
+    Enroque                                                                 O - 7
+    Comentarios ignorando adentro                                           O - 8
+    Comentarios dentro Comentarios                                          O - 9
+    Nivel de comentarios                                                    O - 10
+    Ver movimientos de comentarios                                          O - 11
+    Niveles de Comentarios sin Captura                                      O - 12
+    Archivo puede tener varias partidas                                     O - 14
+    Posible indice con 3 puntos luego de comentario                         O - 13
+    Hacer que los 3 puntos vayan con numero correcto                        X
+    Hacer que se pueda tener origen de movimiento con casilla y número      X
+    Resolver Bug de espacios entre movimiento y comentario en comentraios   X
+    Errores descriptivos                                                    X
+    Niveles sin captura para todo el archivo                                X

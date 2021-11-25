@@ -129,7 +129,7 @@ def p_partida(t):
         p_error(t)
 
 def p_jugada(t):
-    '''jugada : NUM PUNTO ESPACIO movimiento comentario movimiento comentario '''
+    '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento comentario '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[6])
     t[0] = int(t[1])
     if t[0] == 0:
@@ -263,6 +263,28 @@ def p_stringComent_escritoEnSComentarios(t):
         else :
             t[0] = Comentario(t[1].mensaje + t[2].mensaje, t[2].nivel, max(t[1].nivelMaxSinCaptura, t[2].nivelMaxSinCaptura))
 
+def p_tresPuntos(t):
+    ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
+                   | Empty'''
+    if t[1]=='' : 
+        t[0] = 0
+    else: 
+        t[0] = int(t[1])
+
+def p_primerComentario(t):
+    ''' primerComentario : LPAREN stringComent RPAREN ESPACIO tresPuntos
+                         | LLLAVE stringComent RLLAVE ESPACIO tresPuntos
+                         | Empty Empty Empty Empty Empty'''
+
+    if(t[1] == ''):
+        t[0] = Comentario('', 0, 0)
+    else:
+        t[0] = Comentario(t[1] + t[2].mensaje + t[3] + t[4], t[2].nivel, t[2].nivelMaxSinCaptura)
+    
+    if t[0].nivel != 0 :
+        print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+
+
 def p_comentario(t):
     ''' comentario : LPAREN stringComent RPAREN ESPACIO
                    | LLLAVE stringComent RLLAVE ESPACIO
@@ -361,30 +383,20 @@ testsToRun.append(('''[test9 "loca"]
 testsToRun.append(('''[test "loca"]
 1. a4! ( Bxg5 h3++ ) Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 2. O-O h3++ 3. O-O-O { Bxg5 JUH775753DdffP-+KJ {dqdoi { Bxg5 } sds3 (lsaks iji Bxg5 ksdi) } } N2d4 0-1''', 1))
 
+# Test 11: Multiples partidas en un archivo
+testsToRun.append(('''[test "loca"]
+1. a4! ( Bxg5 h3++ ) Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 0-1
 
-# Otras partidas para depues testear
+[test "loca"]
+1. a4! ( Bxg5 h3++ ) Bxg5 2. a5 a6 0-1
+''', 1))
 
-'''[Event "Mannheim"]
-[Site "Mannheim GER"]
-[Date "1914.08.01"]
-[EventDate "1914.07.20"]
-[Round "11"]
-[Result "1-0"]
-[White "Alexander Alekhine"]
-[Black "Hans Fahrni"]
-[ECO "C13"]
-[WhiteElo "?"]
-[BlackElo "?"]
-[PlyCount "45"]
+# Test 12: Comentario con 3 puntos
+testsToRun.append(('''[test "loca"]
+1. a4! ( Bxg5 h3++ ) 1... Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 2. a2! ( maravillosa jugada ) 2... e5 0-1''', 1))
 
-1. e4 {Notes by Richard Reti} 1... e6 2. d4 d5 3. Nc3 Nf6 4. Bg5 Be7 5. e5 Nfd7 6. h4 {This ingenious method of play which has subsequently been adopted by all modern masters is characteristic of Alekhine’s style.} 6... Bxg5 7. hxg5 Qxg5 8. Nh3 {! The short-stepping knight is always brought as near as possible to the actual battle field. Therefore White does not make the plausible move 8 Nf3 but 8 Nh3 so as to get the knight to f4.} 8... Qe7 9. Nf4 Nf8 10. Qg4 f5 {The only move. Not only was 11 Qxg7 threatened but also Nxd5.} 11. exf6 gxf6 12. O-O-O {He again threatens Nxd5.} 12... c6 13. Re1 Kd8 14. Rh6 e5 15. Qh4 Nbd7 16. Bd3 e4 17. Qg3 Qf7 {Forced - the sacrifice of the knight at d5 was threatened and after 17...Qd6 18 Bxe4 dxe4 19 Rxe4 and 20 Qg7 wins.} 18. Bxe4 dxe4 19. Nxe4 Rg8 20. Qa3 {Here, as so often happens, a surprising move and one difficult to have foreseen, forms the kernel of an apparently simple Alekhine combination.} 20... Qg7 {After 20.Qe7 21.Qa5+ b6 22.Qc3 would follow.} 21. Nd6 Nb6 22. Ne8 Qf7 {White mates in three moves.} 23. Qd6+ 1-0'''
-
-'''[a "b"]
-
-1. e4 d5 {defensa escandinava (es com´un 2. exd5 Da5 {no es com´un 2... c6})} 1/2-1/2'''
-
-''''''
-'''[prueba "loca"]
+# Test 13:
+testsToRun.append(('''[prueba "loca"]
 [Nzscf5qWgtg~NVX "56B~n~nQIeAhy"]
 [gvk7dXkliRpR "2LAkQJGhz81"]
 [~NFS5lBHW4Mm~NmJsP "e4ZhVulzl"]
@@ -410,12 +422,33 @@ P5g1 e1 21. Pg3 c3 22. f5 Kh1 23. Pd7 Nf3 24. Nd1 Rd1 25. Kd5
 Ng8 26. e3 Nxg6 27. Rh8 fc3 28. Kxf1 Ncc4 29. c1+ e3 30. cc6 (a
 Kdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me
 1b6 hu Kd7 R Pxe6 Nxg7 DaR Ba8 Kxd5 Nd7 ttxI fe7 GK a2 m f6 Skp)
+
 30... h8 31. Qh1 a1 32. fb7 b7 0-1
+
 [4e "ws20"]
-1. Bxd1 Pa6 0-1
 
+1. Bxd1 Pa6 0-1''', 1))
 
-'''
+# Otras partidas para depues testear
+
+'''[Event "Mannheim"]
+[Site "Mannheim GER"]
+[Date "1914.08.01"]
+[EventDate "1914.07.20"]
+[Round "11"]
+[Result "1-0"]
+[White "Alexander Alekhine"]
+[Black "Hans Fahrni"]
+[ECO "C13"]
+[WhiteElo "?"]
+[BlackElo "?"]
+[PlyCount "45"]
+
+1. e4 {Notes by Richard Reti} 1... e6 2. d4 d5 3. Nc3 Nf6 4. Bg5 Be7 5. e5 Nfd7 6. h4 {This ingenious method of play which has subsequently been adopted by all modern masters is characteristic of Alekhine’s style.} 6... Bxg5 7. hxg5 Qxg5 8. Nh3 {! The short-stepping knight is always brought as near as possible to the actual battle field. Therefore White does not make the plausible move 8 Nf3 but 8 Nh3 so as to get the knight to f4.} 8... Qe7 9. Nf4 Nf8 10. Qg4 f5 {The only move. Not only was 11 Qxg7 threatened but also Nxd5.} 11. exf6 gxf6 12. O-O-O {He again threatens Nxd5.} 12... c6 13. Re1 Kd8 14. Rh6 e5 15. Qh4 Nbd7 16. Bd3 e4 17. Qg3 Qf7 {Forced - the sacrifice of the knight at d5 was threatened and after 17...Qd6 18 Bxe4 dxe4 19 Rxe4 and 20 Qg7 wins.} 18. Bxe4 dxe4 19. Nxe4 Rg8 20. Qa3 {Here, as so often happens, a surprising move and one difficult to have foreseen, forms the kernel of an apparently simple Alekhine combination.} 20... Qg7 {After 20.Qe7 21.Qa5+ b6 22.Qc3 would follow.} 21. Nd6 Nb6 22. Ne8 Qf7 {White mates in three moves.} 23. Qd6+ 1-0'''
+
+'''[a "b"]
+
+1. e4 d5 {defensa escandinava (es com´un 2. exd5 Da5 {no es com´un 2... c6})} 1/2-1/2'''
 
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
