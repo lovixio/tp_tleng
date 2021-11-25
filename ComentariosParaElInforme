@@ -10,5 +10,5 @@ Partes incrementales:
     Enroque                        O - 7
     Comentarios ignorando adentro  O - 8
     Comentarios dentro Comentarios O - 9
-    Nivel de comentarios           X
+    Nivel de comentarios           O - 10
     Ver movimientos de comentarios X
