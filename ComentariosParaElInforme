@@ -11,4 +11,9 @@ Partes incrementales:
     Comentarios ignorando adentro  O - 8
     Comentarios dentro Comentarios O - 9
     Nivel de comentarios           O - 10
-    Ver movimientos de comentarios X
+    Ver movimientos de comentarios O - 11
+    Niveles de Comentarios sin Captura O - 12
+    Archivo puede tener varias partidas O - 13
+    Resolver Bug de espacios entre movimiento y comentario en comentraios X
+    Errores descriptivos           X
+    Niveles sin captura para todo el archivo
