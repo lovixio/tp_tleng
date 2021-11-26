@@ -49,6 +49,15 @@ class Seguimiento:
         self.tieneCaptura = captura
         self.mensaje = mensaje
 
+class Jugada: 
+    def __init__(self, numJugada, maxNivel):
+        self.numeroJugada = int(numJugada)
+        self.nivelMaxSinCaptura = int(maxNivel)
+
+class MaxLvlContainer:
+    def __init__(self, maxNivel):
+        self.nivelMaxSinCaptura = int(maxNivel)
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
@@ -65,16 +74,21 @@ lexer = lex.lex()
 precedence = ()
 
 def p_file(t):
-    '''file : partida file
-            | partida '''
+    '''file : metadataInicio file
+            | metadataInicio Empty'''
+    if t[2] == "":
+        t[0] = MaxLvlContainer(t[1].nivelMaxSinCaptura)
+    else:
+        t[0] = MaxLvlContainer(maxNivel(t[1], t[2]))           
 
-def p_partida_InicioArchivo(t):
-    '''partida : LCORCHETE metadata RCORCHETE metadataSegment'''
+def p_metadataInicio(t):
+    '''metadataInicio : LCORCHETE metadata RCORCHETE metadataSegment partida'''
+    t[0] = MaxLvlContainer(t[5].nivelMaxSinCaptura)
 
 #El segmento de metadata hace recursión hasta terminar en una partida
 def p_metadataSegment_MetaData(t):
     '''metadataSegment : LCORCHETE metadata RCORCHETE metadataSegment
-                       | partida'''
+                       | Empty '''
 
 def p_metadata_renglonMetaData(t):
     '''metadata : stringMeta1 ESPACIO COMILLA stringMeta2 COMILLA'''
@@ -88,6 +102,10 @@ def p_stringMeta_escritoEnPrimerElementoMetadata(t):
 
 def p_contenidoMeta1_delStringMeta1(t):
     '''contenidoMeta1 : caracteresnormales
+                      | EQUIS
+                      | NUM
+                      | CASILLA
+                      | PIEZA
                       | LPAREN
                       | RPAREN
                       | LLLAVE
@@ -101,6 +119,10 @@ def p_stringMeta2_escritoEnSegundoElementoMetadata(t):
 
 def p_contenidoMeta2_delStringMeta2(t):
     '''contenidoMeta2 : caracteresnormales
+                      | EQUIS
+                      | NUM
+                      | CASILLA
+                      | PIEZA
                       | ESPACIO
                       | LPAREN
                       | RPAREN
@@ -109,39 +131,36 @@ def p_contenidoMeta2_delStringMeta2(t):
     t[0] = t[1]
 
 def p_caracteresnormales(t):
-    '''caracteresnormales : NUM
-                        | MENOS
+    '''caracteresnormales : MENOS
                         | CARACTERES
-                        | CASILLA
-                        | PIEZA
                         | SLASH
                         | MAS
                         | PREGUNTA
                         | EXCLAMACION
-                        | EQUIS
                         | O '''
     t[0] = t[1]
 
 #una partida empieza con una jugada y una siguiente jugada (la cual puede ser el score, indicando el final de la partida)
 def p_partida(t): 
     '''partida : jugada sigjugada'''
-    if not (t[1] == 1 and (t[2] == 2 or t[2] == 0)):
+    if not (t[1].numeroJugada == 1 and (t[2].numeroJugada == 2 or t[2].numeroJugada == 0)):
         p_error(t)
+    t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
 
 def p_jugada(t):
     '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento comentario '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[6])
-    t[0] = int(t[1])
-    if t[0] == 0:
+    t[0] = Jugada(t[1], maxNivel(t[5], t[7]))
+    if t[0].numeroJugada == 0:
         p_error(t)
 
 def p_sigjugada(t):
     '''sigjugada : jugada sigjugada 
                  | score'''
-    if t[1]!=0 and not (t[2] == t[1]+1 or t[2] == 0):
+    if t[1].numeroJugada != 0 and not (t[2].numeroJugada == t[1].numeroJugada + 1 or t[2].numeroJugada == 0):
         p_error(t)
     #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
-    t[0] = t[1]
+    t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
 
 def p_movimiento(t):
     ''' movimiento : pieza casillas NUM mate calidad ESPACIO '''
@@ -194,74 +213,128 @@ def p_mate(t):
             | Empty '''
 
 
-def p_seguimientoEspacio(t):
-    '''seguimientoEspacio : PIEZA seguimientoPieza
-                          | CASILLA seguimientoCasilla 
-                          | Empty Empty'''
-    if t[1] == '':
-        t[0] = Seguimiento('', False)
-    else:
-        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
+
+
+
 
 
 def p_seguimientoPieza(t):
-    '''seguimientoPieza : CASILLA seguimientoCasilla
-                        | NUM seguimientoOrigen
-                        | Empty Empty'''
-    if t[1] == '':
-        t[0] = Seguimiento('', True)
+    '''seguimientoPieza : CASILLA seguimientoOrigenCasilla Empty
+                        | NUM seguimientoOrigenNum Empty
+                        | caracteresnormales Empty stringComentario
+                        | EQUIS Empty stringComentario
+                        | PIEZA Empty stringComentario
+                        | Empty Empty Empty '''
+    if t[2] == '':
+        if t[1] == '' :
+            t[0] = Seguimiento('', False)
+        else:
+            t[0] = Seguimiento(t[1] + t[3].mensaje, False)
     else:
         t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
 
-def p_seguimientoOrigen_ConNumero(t):
-    ''' seguimientoOrigen : CASILLA NUM seguimientoNum
-                          | Empty Empty Empty'''
-    if t[1] == '':
-        t[0] = Seguimiento('', True)
-    else:
-        t[0] = Seguimiento(t[1]+t[2]+t[3].mensaje, t[3].tieneCaptura)
-
-def p_seguimientoCasilla(t):
-    '''seguimientoCasilla : CASILLA NUM seguimientoNum
-                          | NUM Empty seguimientoNum
-                          | Empty Empty Empty'''
-    if t[1] == '':
-        t[0] = Seguimiento('', False)
-    else:
-        t[0] = Seguimiento(t[1]+t[2]+t[3].mensaje, t[3].tieneCaptura)
-
-def p_seguimientoNum(t):
-    '''seguimientoNum : mate calidad ESPACIO
-                      | Empty Empty Empty'''
-
-    t[0] = Seguimiento(t[3], t[3]=='')
-
-
-
-def p_contenidoComent_delStringComent(t):
-    '''contenidoComent : caracteresnormales Empty Empty
-                       | ESPACIO Empty seguimientoEspacio
-                       | ESPACIO comentario Empty'''
+def p_seguimientoOrigenCasilla(t):
+    '''seguimientoOrigenCasilla : EQUIS seguimientoCaptura Empty
+                                | NUM seguimientoOrigenNum Empty
+                                | caracteresnormales Empty stringComentario
+                                | PIEZA Empty stringComentario
+                                | Empty Empty Empty'''
     if t[2] == '':
-        if t[3] == '':
-            t[0] = Comentario(t[1], 1, 1)
+        if t[1] == '' :
+            t[0] = Seguimiento('', False)
         else:
-            t[0] = Comentario(t[1] + t[3].mensaje, 1, 1-int(t[3].tieneCaptura))
+            t[0] = Seguimiento(t[1] + t[3].mensaje, False)
     else:
-        t[0] = Comentario(t[1] + t[2].mensaje, t[2].nivel + 1, t[2].nivelMaxSinCaptura + 1)
+        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
 
-def p_stringComent_escritoEnSComentarios(t):
-    '''stringComent : contenidoComent stringComent
-                    | contenidoComent Empty'''
-    if t[2] == '':
-        t[0] = t[1]
+def p_seguimientoOrigenNum(t):
+    ''' seguimientoOrigenNum : EQUIS seguimientoCaptura
+                             | caracteresnormales stringComentario
+                             | PIEZA stringComentario 
+                             | NUM stringComentario
+                             | CASILLA stringComentario
+                             | Empty Empty   '''
+    if t[2] != 'x':
+        if t[1] == '' :
+            t[0] = Seguimiento('', False)
+        else:
+            t[0] = Seguimiento(t[1] + t[2].mensaje, False)
     else:
-        maximo_nivel = max(t[1].nivelMaxSinCaptura, t[2].nivelMaxSinCaptura)
-        minimo_nivel = min(t[1].nivelMaxSinCaptura, t[2].nivelMaxSinCaptura)
-        if maximo_nivel == 1 and minimo_nivel == 0 :
-            t[0] = Comentario(t[1].mensaje + t[2].mensaje, t[2].nivel, 0)
+        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
+
+def p_seguimientoCaptura(t):
+    '''seguimientoCaptura : CASILLA NUM mate seguimientoMovConCaptura
+                          | caracteresnormales stringComentario Empty Empty
+                          | EQUIS stringComentario Empty Empty
+                          | PIEZA stringComentario Empty Empty
+                          | NUM stringComentario Empty Empty
+                          | Empty Empty Empty Empty '''
+
+    if t[4] == '' :
+        if t[1] == '' :
+            t[0] = Seguimiento('', False)
         else :
-            t[0] = Comentario(t[1].mensaje + t[2].mensaje, t[2].nivel, max(t[1].nivelMaxSinCaptura, t[2].nivelMaxSinCaptura))
+            t[0] = Seguimiento(t[1] + t[2].mensaje, False)
+    else:
+        t[0] = Seguimiento(t[1]+t[2]+t[3]+t[4].mensaje, t[4].tieneCaptura)
+
+def p_seguimientoMovConCaptura(t):
+    ''' seguimientoMovConCaptura : contenidoStringComentario stringComentario
+                                 | Empty Empty '''
+    if t[2] == '' :
+        t[0] = Seguimiento('', True)
+    else : 
+        t[0] = Seguimiento(t[1] + t[2].mensaje, False)
+
+def p_contenidoStringComentario(t):
+    '''contenidoStringComentario : caracteresnormales
+                                 | EQUIS
+                                 | CASILLA
+                                 | PIEZA
+                                 | NUM'''
+    t[0] = t[1]
+
+def p_stringComentario_delStringComent(t):
+    '''stringComentario : contenidoStringComentario stringComentario
+                        | Empty Empty'''
+    if t[2] == '' :
+        t[0] = Comentario('', 1, 1)
+    else :
+        t[0] = Comentario(t[1] + t[2].mensaje, 1, 1)
+
+def p_palabraComentario_escritoEnComentarios(t):
+    '''palabraComentario : caracteresnormales Empty stringComentario
+                         | EQUIS Empty stringComentario 
+                         | PIEZA seguimientoPieza Empty
+                         | CASILLA seguimientoOrigenCasilla Empty
+                         | NUM seguimientoOrigenNum Empty
+                         | comentario Empty Empty'''
+    if t[3] != '':
+        t[0] = Comentario(t[1]+t[3].mensaje, t[3].nivel, t[3].nivelMaxSinCaptura)
+    elif t[2] == '' :
+        nivelSinCaptura = 0
+
+        if t[1].nivelMaxSinCaptura != 0 :
+            nivelSinCaptura = t[1].nivelMaxSinCaptura + 1
+
+        t[0] = Comentario(t[1].mensaje, t[1].nivel, nivelSinCaptura)
+    else:
+        t[0] = Comentario(t[1]+t[2].mensaje, 1, 1-int(t[2].tieneCaptura))
+        
+def p_contenidoComentario(t):
+    ''' contenidoComentario : palabraComentario ESPACIO contenidoComentario
+                          | palabraComentario Empty Empty Empty'''
+    if t[2] == '' :
+        t[0] = t[1]      
+    else:               
+        maximo_nivel = max(t[1].nivel, t[3].nivel)
+        maximo_nivelCaptura = max(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
+        minimo_nivelCaptura = min(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
+        if maximo_nivelCaptura == 1 and minimo_nivelCaptura == 0 :
+            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, 0)
+        else :
+            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, maximo_nivelCaptura)
+            
 
 def p_tresPuntos(t):
     ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
@@ -272,8 +345,8 @@ def p_tresPuntos(t):
         t[0] = int(t[1])
 
 def p_primerComentario(t):
-    ''' primerComentario : LPAREN stringComent RPAREN ESPACIO tresPuntos
-                         | LLLAVE stringComent RLLAVE ESPACIO tresPuntos
+    ''' primerComentario : LPAREN contenidoComentario RPAREN ESPACIO tresPuntos
+                         | LLLAVE contenidoComentario RLLAVE ESPACIO tresPuntos
                          | Empty Empty Empty Empty Empty'''
 
     if(t[1] == ''):
@@ -286,8 +359,8 @@ def p_primerComentario(t):
 
 
 def p_comentario(t):
-    ''' comentario : LPAREN stringComent RPAREN ESPACIO
-                   | LLLAVE stringComent RLLAVE ESPACIO
+    ''' comentario : LPAREN contenidoComentario RPAREN ESPACIO
+                   | LLLAVE contenidoComentario RLLAVE ESPACIO
                    | Empty Empty Empty Empty '''
     if(t[1] == ''):
         t[0] = Comentario('', 0, 0)
@@ -299,13 +372,13 @@ def p_comentario(t):
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
-    t[0] = 0
+    t[0] = Jugada(0, 0)
     if int(t[1]) > 1 or int(t[3]) > 1:
         p_error(t)
 
 def p_score_fraccion(t):
     '''score : NUM SLASH NUM MENOS NUM SLASH NUM'''
-    t[0] = 0
+    t[0] = Jugada(0, 0)
     if not (int(t[1]) == 1 and int(t[3]) == 2 and int(t[5]) == 1 and int(t[7]) == 2) :
         p_error(t)
 
@@ -316,6 +389,7 @@ def p_Empty(t):
 
 def p_error(t):
     raise RejectStringError(t)
+    
 
 parser = yacc.yacc()
 
@@ -377,23 +451,23 @@ testsToRun.append(('''[prueba "loca"]
 
 # Test 9: partida con comentarios dentro de comentarios
 testsToRun.append(('''[test9 "loca"]
-1. a4! ( aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq ) Bxg5 { sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi) } 2. O-O h3++ 3. O-O-O { sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 { odaoausd0} sds3 (lsaks iji   ksdi) } } N2d4 0-1''', 1))
+1. a4! (aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq) Bxg5 {sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi) } 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 {odaoausd0} sds3 (lsaks iji   ksdi) } } N2d4 0-1''', 1))
 
 # Test 10: partida con comentarios con capturas dentro
 testsToRun.append(('''[test "loca"]
-1. a4! ( Bxg5 h3++ ) Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 2. O-O h3++ 3. O-O-O { Bxg5 JUH775753DdffP-+KJ {dqdoi { Bxg5 } sds3 (lsaks iji Bxg5 ksdi) } } N2d4 0-1''', 1))
+1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+  (asdasd) } 2. O-O h3++ 3. O-O-O {Bxg5 JUH775753DdffP-+KJ {dqdoi {Bxg5} sds3 (lsaks iji Bxg5 ksdi) } } N2d4 0-1''', 1))
 
 # Test 11: Multiples partidas en un archivo
 testsToRun.append(('''[test "loca"]
-1. a4! ( Bxg5 h3++ ) Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 0-1
+1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+  (asdasd) } 0-1
 
 [test "loca"]
-1. a4! ( Bxg5 h3++ ) Bxg5 2. a5 a6 0-1
+1. a4! (Bxg5 h3++) Bxg5 2. a5 a6 0-1
 ''', 1))
 
 # Test 12: Comentario con 3 puntos
 testsToRun.append(('''[test "loca"]
-1. a4! ( Bxg5 h3++ ) 1... Bxg5 { h3++ Bxg5!+ a3+  ( asdasd ) } 2. a2! ( maravillosa jugada ) 2... e5 0-1''', 1))
+1. a4! (Bxg5 h3++) 1... Bxg5 {h3++ Bxg5!+ a3+ (asdasd) } 2. a2! (maravillosa jugada) 2... e5 0-1''', 1))
 
 # Test 13:
 testsToRun.append(('''[prueba "loca"]

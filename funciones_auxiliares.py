@@ -14,6 +14,9 @@ def runTests(listOfTests, parser):
             print(red('Error en el test ' + str(i)))
         i = i + 1
 
+def parseLexTokenError(t):
+    return f'Unexpected Token {t.type}: {t.value} at line: {t.lineno} position: {t.lexpos}'
+
 class RejectStringError(Exception):
     def __init__(self, t):
         self.t = t
@@ -24,10 +27,13 @@ def parserF(cadena, parser):
         #openAndParse(cadena, parser) "Descomentar esta linea si cadena es un path a un txt"
         return 1
     except RejectStringError as inst:
-        print(inst)
+        print(inst) #este
         return -1
 
 def openAndParse(file, parser):
     with open(file, 'r') as file:
         partida = file.read()
         return parser(partida)
+
+def maxNivel(attrComentario1, attrComentario2):
+    return max(attrComentario1.nivelMaxSinCaptura, attrComentario2.nivelMaxSinCaptura)
