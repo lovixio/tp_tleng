@@ -10,7 +10,7 @@ tokens = (
     'CARACTERES', 
     'LCORCHETE' , 'RCORCHETE',
     'COMILLA', 'ESPACIO' , 'newline',
-    'MENOS', 'NUM', 'PUNTO', 'CASILLA', 'PIEZA' , 'SLASH',
+    'MENOS', 'NUM', 'PUNTO', 'COLUMNA', 'PIEZA' , 'SLASH',
     'MAS', 'PREGUNTA', 'EXCLAMACION', 'EQUIS', 'O',
     'LPAREN', 'RPAREN', 'LLLAVE', 'RLLAVE'
 )
@@ -26,7 +26,7 @@ t_MENOS = r'-'
 t_NUM = r'\d+'
 t_PUNTO = r'\.'
 t_PIEZA = r'[P|N|B|R|Q|K]'
-t_CASILLA = r'[a-h]'
+t_COLUMNA = r'[a-h]'
 t_SLASH = r'\/'
 t_MAS = r'\+'
 t_PREGUNTA = r'\?'
@@ -58,6 +58,11 @@ class MaxLvlContainer:
     def __init__(self, maxNivel):
         self.nivelMaxSinCaptura = int(maxNivel)
 
+class Casillas:
+    def __init__(self, mensaje, numeroDeFila):
+        self.mensaje = mensaje       
+        self.numeroDeFila = int(numeroDeFila)
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
@@ -68,7 +73,7 @@ def t_error(t):
     t.lexer.skip(1)
  
 # Build the lexer
-lexer = lex.lex()
+lexer = lex.lex(debug=1)
 
 # Parsing rules
 precedence = ()
@@ -104,7 +109,7 @@ def p_contenidoMeta1_delStringMeta1(t):
     '''contenidoMeta1 : caracteresnormales
                       | EQUIS
                       | NUM
-                      | CASILLA
+                      | COLUMNA
                       | PIEZA
                       | LPAREN
                       | RPAREN
@@ -121,7 +126,7 @@ def p_contenidoMeta2_delStringMeta2(t):
     '''contenidoMeta2 : caracteresnormales
                       | EQUIS
                       | NUM
-                      | CASILLA
+                      | COLUMNA
                       | PIEZA
                       | ESPACIO
                       | LPAREN
@@ -150,6 +155,10 @@ def p_partida(t):
 def p_jugada(t):
     '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento segundoComentario '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[6])
+
+    if t[1] == "9":
+        t[1] = t[1]
+
     t[0] = Jugada(t[1], maxNivel(t[5], t[7]))
     if t[0].numeroJugada == 0:
         p_error(t)
@@ -161,12 +170,12 @@ def p_sigjugada(t):
         p_error(t)
     #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
     t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
-
+        
 def p_movimiento(t):
-    ''' movimiento : pieza casillas NUM mate calidad ESPACIO '''
-    t[0] = t[1] + t[2] + t[3]
+    ''' movimiento : pieza casillas mate calidad ESPACIO '''
+    t[0] = t[1] + t[2].mensaje + t[3] + t[4]
     
-    numCasilla = int(t[3])
+    numCasilla = t[2].numeroDeFila
     if numCasilla == 0 or numCasilla >= 9:
         p_error(t)
 
@@ -183,34 +192,52 @@ def p_pieza(t):
               | Empty'''
     t[0] = t[1]
 
-def p_casillas_CapturaDestino(t):
-    '''casillas : CASILLA'''
-    t[0] = t[1]
+def p_casillas_OrigenNumero(t):
+    '''casillas : NUM captura COLUMNA NUM'''
+    t[0] = Casillas(t[1] + t[2] + t[3] + t[4], int(t[4]))
 
-def p_casillas_OrigenCapturaDestino(t):
-    '''casillas : origen captura CASILLA'''
-    t[0] = t[1] + t[2] + t[3]
+def p_casillas_Captura(t):
+    '''casillas : EQUIS COLUMNA NUM'''
+    t[0] = Casillas(t[1]+t[2]+t[3], int(t[3]))
 
-def p_origen(t):
-    ''' origen : CASILLA
-               | NUM
-               | Empty'''
-    t[0] = t[1]
+def p_casillas_Columna(t):
+    '''casillas : COLUMNA NUM destinoPosible Empty
+                | COLUMNA EQUIS COLUMNA NUM
+                | COLUMNA Empty COLUMNA NUM'''
+    if t[4] == '' : 
+        if t[3].numeroDeFila == 0 :
+            t[0] = Casillas(t[1] + t[2], t[2])
+        else: 
+            t[0] = Casillas(t[1] + t[2] + t[3].mensaje, t[3].numeroDeFila)
+    else:
+        t[0] = Casillas(t[1]+t[2]+t[3]+t[4], int(t[4]))
+        
+
+def p_destinoPosible(t):
+    ''' destinoPosible : EQUIS COLUMNA NUM
+                       | COLUMNA Empty NUM 
+                       | Empty Empty Empty'''
+    if t[3] == '' : 
+        t[0] = Casillas('', 0)
+    else:
+        t[0] = Casillas(t[1] + t[2] + t[3], t[3])
         
 def p_captura(t):
-    ''' captura : EQUIS
-                | Empty'''
+    '''captura : EQUIS
+               | Empty'''
     t[0] = t[1]
 
 def p_calidad_deUnMovimiento(t):
-        ''' calidad : EXCLAMACION
-                    | PREGUNTA
-                    | Empty'''
+    '''calidad : EXCLAMACION
+               | PREGUNTA
+               | Empty'''
+    t[0] = t[1]
 
 def p_mate(t):
-    '''mate : MAS
+    '''mate : MAS Empty
             | MAS MAS
-            | Empty '''
+            | Empty Empty'''
+    t[0] = t[1] + t[2]
 
 
 
@@ -219,7 +246,7 @@ def p_mate(t):
 
 
 def p_seguimientoPieza(t):
-    '''seguimientoPieza : CASILLA seguimientoOrigenCasilla Empty
+    '''seguimientoPieza : COLUMNA seguimientoOrigenCasilla Empty
                         | NUM seguimientoOrigenNum Empty
                         | caracteresnormales Empty stringComentario
                         | EQUIS Empty stringComentario
@@ -237,7 +264,7 @@ def p_seguimientoOrigenCasilla(t):
     '''seguimientoOrigenCasilla : EQUIS seguimientoCaptura Empty
                                 | NUM seguimientoOrigenNum Empty
                                 | caracteresnormales Empty stringComentario
-                                | CASILLA Empty stringComentario
+                                | COLUMNA Empty stringComentario
                                 | PIEZA Empty stringComentario
                                 | Empty Empty Empty'''
     if t[2] == '':
@@ -253,7 +280,7 @@ def p_seguimientoOrigenNum(t):
                              | caracteresnormales stringComentario
                              | PIEZA stringComentario 
                              | NUM stringComentario
-                             | CASILLA stringComentario
+                             | COLUMNA stringComentario
                              | Empty Empty   '''
     if t[2] != 'x':
         if t[1] == '' :
@@ -264,7 +291,7 @@ def p_seguimientoOrigenNum(t):
         t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
 
 def p_seguimientoCaptura(t):
-    '''seguimientoCaptura : CASILLA NUM mate seguimientoMovConCaptura
+    '''seguimientoCaptura : COLUMNA NUM mate seguimientoMovConCaptura
                           | caracteresnormales stringComentario Empty Empty
                           | EQUIS stringComentario Empty Empty
                           | PIEZA stringComentario Empty Empty
@@ -290,7 +317,7 @@ def p_seguimientoMovConCaptura(t):
 def p_contenidoStringComentario(t):
     '''contenidoStringComentario : caracteresnormales
                                  | EQUIS
-                                 | CASILLA
+                                 | COLUMNA
                                  | PIEZA
                                  | NUM'''
     t[0] = t[1]
@@ -307,7 +334,7 @@ def p_palabraComentario_escritoEnComentarios(t):
     '''palabraComentario : caracteresnormales Empty stringComentario
                          | EQUIS Empty stringComentario 
                          | PIEZA seguimientoPieza Empty
-                         | CASILLA seguimientoOrigenCasilla Empty
+                         | COLUMNA seguimientoOrigenCasilla Empty
                          | NUM seguimientoOrigenNum Empty
                          | comentario Empty Empty'''
     if t[3] != '':
@@ -398,7 +425,6 @@ def p_Empty(t):
 def p_error(t):
     raise RejectStringError(t)
     
-
 parser = yacc.yacc()
 
 """while 1:
@@ -534,12 +560,12 @@ Kdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me
 
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
-runTests(testsToRun, parser.parse)
+runTests(testsToRun[0:12], parser.parse)
 
 
 
 # Notas sobre las capturas:
 #
-#   Algunas jugadas tienen PIEZA NUM ... y otras PIEZA CASILLA ...
+#   Algunas jugadas tienen PIEZA NUM ... y otras PIEZA COLUMNA ...
 #   Un movimiento no puede empezar con 'x'
 #

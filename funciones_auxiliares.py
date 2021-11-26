@@ -7,7 +7,9 @@ def red(mes):
 def runTests(listOfTests, parser):
     i = 1
     for test in listOfTests:
-        res = parserF(test[0], parser)
+        if(i == 13):
+            i = i
+        res = parserF(test[0], parser) 
         if res == test[1]:
             print(green("Paso el test " + str(i)))
         else:
