@@ -13,10 +13,10 @@ Partes incrementales:
     Nivel de comentarios                                                    O - 10
     Ver movimientos de comentarios                                          O - 11
     Niveles de Comentarios sin Captura                                      O - 12
-    Archivo puede tener varias partidas                                     O - 14
     Posible indice con 3 puntos luego de comentario                         O - 13
+    Archivo puede tener varias partidas                                     O - 14
+    Resolver Bug de espacios entre movimiento y comentario en comentraios   O - 15 
     Hacer que los 3 puntos vayan con numero correcto                        X
     Hacer que se pueda tener origen de movimiento con casilla y número      X
-    Resolver Bug de espacios entre movimiento y comentario en comentraios   X
     Errores descriptivos                                                    X
     Niveles sin captura para todo el archivo                                X

@@ -148,7 +148,7 @@ def p_partida(t):
     t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
 
 def p_jugada(t):
-    '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento comentario '''
+    '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento segundoComentario '''
     print("Jugada numero", t[1], "se jugo:", t[4], t[6])
     t[0] = Jugada(t[1], maxNivel(t[5], t[7]))
     if t[0].numeroJugada == 0:
@@ -237,6 +237,7 @@ def p_seguimientoOrigenCasilla(t):
     '''seguimientoOrigenCasilla : EQUIS seguimientoCaptura Empty
                                 | NUM seguimientoOrigenNum Empty
                                 | caracteresnormales Empty stringComentario
+                                | CASILLA Empty stringComentario
                                 | PIEZA Empty stringComentario
                                 | Empty Empty Empty'''
     if t[2] == '':
@@ -335,6 +336,15 @@ def p_contenidoComentario(t):
         else :
             t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, maximo_nivelCaptura)
             
+def p_comentario(t):
+    ''' comentario : LPAREN contenidoComentario RPAREN 
+                   | LLLAVE contenidoComentario RLLAVE '''
+    
+    t[0] = Comentario(t[1] + t[2].mensaje + t[3] , t[2].nivel, t[2].nivelMaxSinCaptura)
+    
+    if t[0].nivel != 0 :
+        print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+
 
 def p_tresPuntos(t):
     ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
@@ -345,27 +355,25 @@ def p_tresPuntos(t):
         t[0] = int(t[1])
 
 def p_primerComentario(t):
-    ''' primerComentario : LPAREN contenidoComentario RPAREN ESPACIO tresPuntos
-                         | LLLAVE contenidoComentario RLLAVE ESPACIO tresPuntos
-                         | Empty Empty Empty Empty Empty'''
+    ''' primerComentario : comentario ESPACIO tresPuntos
+                         | Empty Empty Empty '''
 
     if(t[1] == ''):
         t[0] = Comentario('', 0, 0)
     else:
-        t[0] = Comentario(t[1] + t[2].mensaje + t[3] + t[4], t[2].nivel, t[2].nivelMaxSinCaptura)
+        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
     
     if t[0].nivel != 0 :
         print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
 
 
-def p_comentario(t):
-    ''' comentario : LPAREN contenidoComentario RPAREN ESPACIO
-                   | LLLAVE contenidoComentario RLLAVE ESPACIO
-                   | Empty Empty Empty Empty '''
+def p_segundoComentario(t):
+    ''' segundoComentario : comentario ESPACIO
+                          | Empty Empty '''
     if(t[1] == ''):
         t[0] = Comentario('', 0, 0)
     else:
-        t[0] = Comentario(t[1] + t[2].mensaje + t[3] + t[4], t[2].nivel, t[2].nivelMaxSinCaptura)
+        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
     
     if t[0].nivel != 0 :
         print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
@@ -447,19 +455,19 @@ testsToRun.append(('''[prueba "loca"]
 
 # Test 8: partida con parentesis y llaves en los strings y comentarios
 testsToRun.append(('''[prueba "loca"]
-1. a4! ( aisjdoaijdqoiwdj31124oqjd13jiqdjq ) Bxg5 { sakdasidasdasdi } 2. O-O h3++ 3. O-O-O { sdlajsid JUH775753DdffP-+KJ } N2d4 0-1''', 1))
+1. a4! (aisjdoaijdqoiwdj31124oqjd13jiqdjq) Bxg5 {sakdasidasda8g+sdi} 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ} N2d4 0-1''', 1))
 
 # Test 9: partida con comentarios dentro de comentarios
 testsToRun.append(('''[test9 "loca"]
-1. a4! (aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq) Bxg5 {sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi) } 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 {odaoausd0} sds3 (lsaks iji   ksdi) } } N2d4 0-1''', 1))
+1. a4! (aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq) Bxg5 {sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi)} 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 {odaoausd0} sds3 (lsaks iji ksdi)}} N2d4 0-1''', 1))
 
 # Test 10: partida con comentarios con capturas dentro
 testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+  (asdasd) } 2. O-O h3++ 3. O-O-O {Bxg5 JUH775753DdffP-+KJ {dqdoi {Bxg5} sds3 (lsaks iji Bxg5 ksdi) } } N2d4 0-1''', 1))
+1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 2. O-O h3++ 3. O-O-O {Bxg5 JUH775753DdffP-+KJ {dqdoi {Bxg5} sds3 (lsaks iji Bxg5 ksdi)}} N2d4 0-1''', 1))
 
 # Test 11: Multiples partidas en un archivo
 testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+  (asdasd) } 0-1
+1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 0-1
 
 [test "loca"]
 1. a4! (Bxg5 h3++) Bxg5 2. a5 a6 0-1
@@ -467,7 +475,7 @@ testsToRun.append(('''[test "loca"]
 
 # Test 12: Comentario con 3 puntos
 testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) 1... Bxg5 {h3++ Bxg5!+ a3+ (asdasd) } 2. a2! (maravillosa jugada) 2... e5 0-1''', 1))
+1. a4! (Bxg5 h3++) 1... Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 2. a2! (maravillosa jugada) 2... e5 0-1''', 1))
 
 # Test 13:
 testsToRun.append(('''[prueba "loca"]
