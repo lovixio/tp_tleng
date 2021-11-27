@@ -14,28 +14,28 @@ tokens = (
     'LPAREN', 'RPAREN', 'LLLAVE', 'RLLAVE'
 )
 
-t_LCORCHETE = r'\[' #puede faltar el ] de un segmento de metadata 
-t_RCORCHETE = r'\]' #pueden faltar las segundas comillas de un segmento de metadata
+t_LCORCHETE = r'\['         #puede faltar el ] de un segmento de metadata 
+t_RCORCHETE = r'\]'         #pueden faltar las segundas comillas de un segmento de metadata
 
 #CARACTERES se refiere a todos los caracteres que solo se usen para la metaData y comentarios
 t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' 
-t_COMILLA = r'\"' #puede faltar el ESPACIO entre los strings de metadata
-t_ESPACIO = r'\ ' #cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
-t_MENOS = r'-' #Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
-t_NUM = r'\d+' #Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
-t_PUNTO = r'\.' #puede faltar un NUM para el numero de jugada
-t_PIEZA = r'[P|N|B|R|Q|K]' #puede faltar un ESPACIO antes de un movimiento
-t_COLUMNA = r'[a-h]' #puede faltar un espacio antes de un movimiento
-t_SLASH = r'\/' #puede faltar un NUM del SCORE
-t_MAS = r'\+' #puede faltar un NUM para un movimiento
-t_PREGUNTA = r'\?' #puede faltar un NUM para un movimiento
-t_EXCLAMACION = r'!' #puede faltar un NUM para un movimiento
-t_EQUIS = r'x' # puede faltar un ESPACIO para el movimiento
-t_O = r'O' # puede faltar un MENOS del Enroque o un ESPACIO para el Enroque
-t_LPAREN = r'\(' # puede faltar un ESPACIO para el comentario
-t_RPAREN = r'\)' # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
-t_LLLAVE = r'\{' # puede faltar un ESPACIO para el comentario
-t_RLLAVE = r'\}' # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
+t_COMILLA = r'\"'           #puede faltar el ESPACIO entre los strings de metadata
+t_ESPACIO = r'\ '           #cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+t_MENOS = r'-'              #Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
+t_NUM = r'\d+'              #Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
+t_PUNTO = r'\.'             #puede faltar un NUM para el numero de jugada
+t_PIEZA = r'[P|N|B|R|Q|K]'  #puede faltar un ESPACIO antes de un movimiento
+t_COLUMNA = r'[a-h]'        #puede faltar un espacio antes de un movimiento
+t_SLASH = r'\/'             #puede faltar un NUM del SCORE
+t_MAS = r'\+'               #puede faltar un NUM para un movimiento
+t_PREGUNTA = r'\?'          #puede faltar un NUM para un movimiento
+t_EXCLAMACION = r'!'        #puede faltar un NUM para un movimiento
+t_EQUIS = r'x'              # puede faltar un ESPACIO para el movimiento
+t_O = r'O'                  # puede faltar un MENOS del Enroque o un ESPACIO para el Enroque
+t_LPAREN = r'\('            # puede faltar un ESPACIO para el comentario
+t_RPAREN = r'\)'            # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
+t_LLLAVE = r'\{'            # puede faltar un ESPACIO para el comentario
+t_RLLAVE = r'\}'            # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
 
 class Comentario:
     def __init__(self, mensaje, nivel, maxNivel, jugada=-1):
@@ -275,6 +275,96 @@ def p_mate(t):
             | Empty Empty'''
     t[0] = t[1] + t[2]
 
+def p_primerComentario(t):
+    ''' primerComentario : comentario ESPACIO tresPuntos
+                         | Empty Empty Empty '''
+
+    if(t[1] == ''):
+        t[0] = Comentario('', 0, 0, -1)
+    else:
+        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura, t[3])
+    
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+
+def p_tresPuntos(t):
+    ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
+                   | Empty'''
+    if t[1]=='' : 
+        t[0] = -1
+    else: 
+        t[0] = int(t[1])
+
+def p_segundoComentario(t):
+    ''' segundoComentario : comentario ESPACIO
+                          | Empty Empty '''
+    if(t[1] == ''):
+        t[0] = Comentario('', 0, 0)
+    else:
+        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
+    
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+            
+def p_comentario(t):
+    ''' comentario : LPAREN contenidoComentario RPAREN 
+                   | LLLAVE contenidoComentario RLLAVE '''
+    
+    t[0] = Comentario(t[1] + t[2].mensaje + t[3] , t[2].nivel, t[2].nivelMaxSinCaptura)
+    
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+        
+def p_contenidoComentario(t):
+    ''' contenidoComentario : palabraComentario ESPACIO contenidoComentario
+                          | palabraComentario Empty Empty Empty'''
+    if t[2] == '' :
+        t[0] = t[1]      
+    else:               
+        maximo_nivel = max(t[1].nivel, t[3].nivel)
+        maximo_nivelCaptura = max(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
+        minimo_nivelCaptura = min(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
+        if maximo_nivelCaptura == 1 and minimo_nivelCaptura == 0 :
+            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, 0)
+        else :
+            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, maximo_nivelCaptura)
+
+def p_palabraComentario_escritoEnComentarios(t):
+    '''palabraComentario : caracteresnormales Empty stringComentario
+                         | EQUIS Empty stringComentario 
+                         | PIEZA seguimientoPieza Empty
+                         | COLUMNA seguimientoOrigenCasilla Empty
+                         | NUM seguimientoOrigenNum Empty
+                         | comentario Empty Empty'''
+    if t[3] != '':
+        t[0] = Comentario(t[1]+t[3].mensaje, t[3].nivel, t[3].nivelMaxSinCaptura)
+    elif t[2] == '' :
+        nivelSinCaptura = 0
+
+        if t[1].nivelMaxSinCaptura != 0 :
+            nivelSinCaptura = t[1].nivelMaxSinCaptura + 1
+
+        t[0] = Comentario(t[1].mensaje, t[1].nivel, nivelSinCaptura)
+    else:
+        t[0] = Comentario(t[1]+t[2].mensaje, 1, 1-int(t[2].tieneCaptura))
+
+def p_stringComentario_delStringComent(t):
+    '''stringComentario : contenidoStringComentario stringComentario
+                        | Empty Empty'''
+    if t[2] == '' :
+        t[0] = Comentario('', 1, 1)
+    else :
+        t[0] = Comentario(t[1] + t[2].mensaje, 1, 1)
+
+def p_contenidoStringComentario(t):
+    '''contenidoStringComentario : caracteresnormales
+                                 | EQUIS
+                                 | COLUMNA
+                                 | PIEZA
+                                 | NUM'''
+    t[0] = t[1]
+
+
 def p_seguimientoPieza(t):
     '''seguimientoPieza : COLUMNA seguimientoOrigenCasilla Empty
                         | NUM seguimientoOrigenNum Empty
@@ -344,96 +434,6 @@ def p_seguimientoMovConCaptura(t):
     else : 
         t[0] = Seguimiento(t[1] + t[2].mensaje, False)
 
-def p_contenidoStringComentario(t):
-    '''contenidoStringComentario : caracteresnormales
-                                 | EQUIS
-                                 | COLUMNA
-                                 | PIEZA
-                                 | NUM'''
-    t[0] = t[1]
-
-def p_stringComentario_delStringComent(t):
-    '''stringComentario : contenidoStringComentario stringComentario
-                        | Empty Empty'''
-    if t[2] == '' :
-        t[0] = Comentario('', 1, 1)
-    else :
-        t[0] = Comentario(t[1] + t[2].mensaje, 1, 1)
-
-def p_palabraComentario_escritoEnComentarios(t):
-    '''palabraComentario : caracteresnormales Empty stringComentario
-                         | EQUIS Empty stringComentario 
-                         | PIEZA seguimientoPieza Empty
-                         | COLUMNA seguimientoOrigenCasilla Empty
-                         | NUM seguimientoOrigenNum Empty
-                         | comentario Empty Empty'''
-    if t[3] != '':
-        t[0] = Comentario(t[1]+t[3].mensaje, t[3].nivel, t[3].nivelMaxSinCaptura)
-    elif t[2] == '' :
-        nivelSinCaptura = 0
-
-        if t[1].nivelMaxSinCaptura != 0 :
-            nivelSinCaptura = t[1].nivelMaxSinCaptura + 1
-
-        t[0] = Comentario(t[1].mensaje, t[1].nivel, nivelSinCaptura)
-    else:
-        t[0] = Comentario(t[1]+t[2].mensaje, 1, 1-int(t[2].tieneCaptura))
-        
-def p_contenidoComentario(t):
-    ''' contenidoComentario : palabraComentario ESPACIO contenidoComentario
-                          | palabraComentario Empty Empty Empty'''
-    if t[2] == '' :
-        t[0] = t[1]      
-    else:               
-        maximo_nivel = max(t[1].nivel, t[3].nivel)
-        maximo_nivelCaptura = max(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
-        minimo_nivelCaptura = min(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
-        if maximo_nivelCaptura == 1 and minimo_nivelCaptura == 0 :
-            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, 0)
-        else :
-            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, maximo_nivelCaptura)
-            
-def p_comentario(t):
-    ''' comentario : LPAREN contenidoComentario RPAREN 
-                   | LLLAVE contenidoComentario RLLAVE '''
-    
-    t[0] = Comentario(t[1] + t[2].mensaje + t[3] , t[2].nivel, t[2].nivelMaxSinCaptura)
-    
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
-
-
-def p_tresPuntos(t):
-    ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
-                   | Empty'''
-    if t[1]=='' : 
-        t[0] = -1
-    else: 
-        t[0] = int(t[1])
-
-def p_primerComentario(t):
-    ''' primerComentario : comentario ESPACIO tresPuntos
-                         | Empty Empty Empty '''
-
-    if(t[1] == ''):
-        t[0] = Comentario('', 0, 0, -1)
-    else:
-        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura, t[3])
-    
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
-
-
-def p_segundoComentario(t):
-    ''' segundoComentario : comentario ESPACIO
-                          | Empty Empty '''
-    if(t[1] == ''):
-        t[0] = Comentario('', 0, 0)
-    else:
-        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
-    
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
@@ -590,6 +590,10 @@ testsToRun.append(('''[a "b"]
 
 1. e4 d5 {defensa escandinava (es - comun 2. exd5 Da5 {no es comun 2... c6})} 1/2-1/2''', 1))
 
+# Test 16: probando que los numeros en los puntos son coherentes
+testsToRun.append(('''[a "b"]
+
+1. e4 (que carajo hizo??) 2... d5 {defensa escandinava (es - comun 2. exd5 Da5 {no es comun 2... c6})} 1/2-1/2''', -1))
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
 runTests(testsToRun, parser.parse)

@@ -17,6 +17,6 @@ Partes incrementales:
     Archivo puede tener varias partidas                                     O - 14
     Resolver Bug de espacios entre movimiento y comentario en comentraios   O - 15 
     Hacer que los 3 puntos vayan con numero correcto                        X
-    Hacer que se pueda tener origen de movimiento con casilla y número      X
+    Hacer que se pueda tener origen de movimiento con casilla y número      O - 16
     Errores descriptivos                                                    X
-    Niveles sin captura para todo el archivo                                X
+    Niveles sin captura para todo el archivo                                O - 17
