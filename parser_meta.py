@@ -73,10 +73,15 @@ def t_error(t):
     t.lexer.skip(1)
  
 # Build the lexer
-lexer = lex.lex(debug=1)
+lexer = lex.lex()
 
 # Parsing rules
 precedence = ()
+
+def p_s(t):
+    '''s : file'''
+    t[0] = t[1]
+    print('', t[0].nivelMaxSinCaptura)  
 
 def p_file(t):
     '''file : metadataInicio file
@@ -84,7 +89,9 @@ def p_file(t):
     if t[2] == "":
         t[0] = MaxLvlContainer(t[1].nivelMaxSinCaptura)
     else:
-        t[0] = MaxLvlContainer(maxNivel(t[1], t[2]))           
+        t[0] = MaxLvlContainer(maxNivel(t[1], t[2]))
+    
+        
 
 def p_metadataInicio(t):
     '''metadataInicio : LCORCHETE metadata RCORCHETE metadataSegment partida'''
@@ -202,8 +209,7 @@ def p_casillas_Captura(t):
 
 def p_casillas_Columna(t):
     '''casillas : COLUMNA NUM destinoPosible Empty
-                | COLUMNA EQUIS COLUMNA NUM
-                | COLUMNA Empty COLUMNA NUM'''
+                | COLUMNA captura COLUMNA NUM'''
     if t[4] == '' : 
         if t[3].numeroDeFila == 0 :
             t[0] = Casillas(t[1] + t[2], t[2])
@@ -214,8 +220,7 @@ def p_casillas_Columna(t):
         
 
 def p_destinoPosible(t):
-    ''' destinoPosible : EQUIS COLUMNA NUM
-                       | COLUMNA Empty NUM 
+    ''' destinoPosible : captura COLUMNA NUM
                        | Empty Empty Empty'''
     if t[3] == '' : 
         t[0] = Casillas('', 0)
@@ -238,12 +243,6 @@ def p_mate(t):
             | MAS MAS
             | Empty Empty'''
     t[0] = t[1] + t[2]
-
-
-
-
-
-
 
 def p_seguimientoPieza(t):
     '''seguimientoPieza : COLUMNA seguimientoOrigenCasilla Empty
@@ -522,16 +521,7 @@ testsToRun.append(('''[prueba "loca"]
 
 [BYsR4sFynE2R~n2 "lNykA4WPhvh2kKPTjfaD"]
 [loCuhQ "WDOTwZIISKjDik~n6"]
-1. Pb7 ec6 2. f4 Nxf7 3. Kxe5 d7 4. Kc7 Rd6 5. e7 Qc7 6. h1 {s
-Rxb7 iI d5 Nh7} 6... e4+ 7. 7d6 Nf7a3 8. Pa7 e2 9. h8 h4 10. g8
-Kxf6 11. 2b3 Bxg3 12. Q5h1 Pb6 13. fd4 e5 14. 5c6 f3 15. cb6 {l
-Pb6} 15... Pb1 16. Nb3 h7 17. b2 Nb7 18. Ra1 N8h6 19. f2 c8 20.
-P5g1 e1 21. Pg3 c3 22. f5 Kh1 23. Pd7 Nf3 24. Nd1 Rd1 25. Kd5
-Ng8 26. e3 Nxg6 27. Rh8 fc3 28. Kxf1 Ncc4 29. c1+ e3 30. cc6 (a
-Kdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me
-1b6 hu Kd7 R Pxe6 Nxg7 DaR Ba8 Kxd5 Nd7 ttxI fe7 GK a2 m f6 Skp)
-
-30... h8 31. Qh1 a1 32. fb7 b7 0-1
+1. Pb7 ec6 2. f4 Nxf7 3. Kxe5 d7 4. Kc7 Rd6 5. e7 Qc7 6. h1 {sRxb7 iI d5 Nh7} 6... e4+ 7. 7d6 Nf7a3 8. Pa7 e2 9. h8 h4 10. g8 Kxf6 11. 2b3 Bxg3 12. Q5h1 Pb6 13. fd4 e5 14. 5c6 f3 15. cb6 {lPb6} 15... Pb1 16. Nb3 h7 17. b2 Nb7 18. Ra1 N8h6 19. f2 c8 20. P5g1 e1 21. Pg3 c3 22. f5 Kh1 23. Pd7 Nf3 24. Nd1 Rd1 25. Kd5 Ng8 26. e3 Nxg6 27. Rh8 fc3 28. Kxf1 Ncc4 29. c1+ e3 30. cc6 (aKdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me1b6 hu Kd7 R Pxe6 Nxg7 DaR Ba8 Kxd5 Nd7 ttxI fe7 GK a2 m f6 Skp) 30... h8 31. Qh1 a1 32. fb7 b7 0-1
 
 [4e "ws20"]
 
@@ -560,12 +550,4 @@ Kdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me
 
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
-runTests(testsToRun[0:12], parser.parse)
-
-
-
-# Notas sobre las capturas:
-#
-#   Algunas jugadas tienen PIEZA NUM ... y otras PIEZA COLUMNA ...
-#   Un movimiento no puede empezar con 'x'
-#
+runTests(testsToRun, parser.parse)
