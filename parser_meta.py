@@ -1,6 +1,5 @@
-
 import ply.lex as lex
-from ply.lex import LexError, StringTypes
+from ply.lex import LexError, StringTypes, LexToken
 import ply.yacc as yacc
 from funciones_auxiliares import *
 
@@ -15,34 +14,36 @@ tokens = (
     'LPAREN', 'RPAREN', 'LLLAVE', 'RLLAVE'
 )
 
-t_LCORCHETE = r'\['
-t_RCORCHETE = r'\]'
+t_LCORCHETE = r'\[' #puede faltar el ] de un segmento de metadata 
+t_RCORCHETE = r'\]' #pueden faltar las segundas comillas de un segmento de metadata
 
 #CARACTERES se refiere a todos los caracteres que solo se usen para la metaData y comentarios
 t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' 
-t_COMILLA = r'\"'
-t_ESPACIO = r'\ '
-t_MENOS = r'-'
-t_NUM = r'\d+'
-t_PUNTO = r'\.'
-t_PIEZA = r'[P|N|B|R|Q|K]'
-t_COLUMNA = r'[a-h]'
-t_SLASH = r'\/'
-t_MAS = r'\+'
-t_PREGUNTA = r'\?'
-t_EXCLAMACION = r'!'
-t_EQUIS = r'x'
-t_O = r'O'
-t_LPAREN = r'\('
-t_RPAREN = r'\)'
-t_LLLAVE = r'\{'
-t_RLLAVE = r'\}'
+t_COMILLA = r'\"' #puede faltar el ESPACIO entre los strings de metadata
+t_ESPACIO = r'\ ' #cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+t_MENOS = r'-' #Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
+t_NUM = r'\d+' #Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
+t_PUNTO = r'\.' #puede faltar un NUM para el numero de jugada
+t_PIEZA = r'[P|N|B|R|Q|K]' #puede faltar un ESPACIO antes de un movimiento
+t_COLUMNA = r'[a-h]' #puede faltar un espacio antes de un movimiento
+t_SLASH = r'\/' #puede faltar un NUM del SCORE
+t_MAS = r'\+' #puede faltar un NUM para un movimiento
+t_PREGUNTA = r'\?' #puede faltar un NUM para un movimiento
+t_EXCLAMACION = r'!' #puede faltar un NUM para un movimiento
+t_EQUIS = r'x' # puede faltar un ESPACIO para el movimiento
+t_O = r'O' # puede faltar un MENOS del Enroque o un ESPACIO para el Enroque
+t_LPAREN = r'\(' # puede faltar un ESPACIO para el comentario
+t_RPAREN = r'\)' # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
+t_LLLAVE = r'\{' # puede faltar un ESPACIO para el comentario
+t_RLLAVE = r'\}' # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
 
 class Comentario:
-    def __init__(self, mensaje, nivel, maxNivel):
+    def __init__(self, mensaje, nivel, maxNivel, jugada=-1):
         self.nivel = nivel
         self.mensaje = mensaje
         self.nivelMaxSinCaptura = maxNivel
+        self.jugada = jugada
+
 
 class Seguimiento:
     def __init__(self, mensaje, captura):
@@ -63,6 +64,11 @@ class Casillas:
         self.mensaje = mensaje       
         self.numeroDeFila = int(numeroDeFila)
 
+class DescripcionDeError:
+    def __init__(self, value, t):
+        self.value = value
+        self.type = t
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
@@ -81,7 +87,7 @@ precedence = ()
 def p_s(t):
     '''s : file'''
     t[0] = t[1]
-    print('', t[0].nivelMaxSinCaptura)  
+    print('Maximo nivel sin captura: ', t[0].nivelMaxSinCaptura, '.')  
 
 def p_file(t):
     '''file : metadataInicio file
@@ -104,7 +110,7 @@ def p_metadataSegment_MetaData(t):
 
 def p_metadata_renglonMetaData(t):
     '''metadata : stringMeta1 ESPACIO COMILLA stringMeta2 COMILLA'''
-    print(t[1] + ' ' + '"' + t[4] + '"')
+    #print(t[1] + ' ' + '"' + t[4] + '"')
 
 #Para parsear las cosas escritas usamos una recursion sobre los distintos tokens que se pueden encontrar
 def p_stringMeta_escritoEnPrimerElementoMetadata(t):
@@ -144,39 +150,65 @@ def p_contenidoMeta2_delStringMeta2(t):
 
 def p_caracteresnormales(t):
     '''caracteresnormales : MENOS
-                        | CARACTERES
-                        | SLASH
-                        | MAS
-                        | PREGUNTA
-                        | EXCLAMACION
-                        | O '''
+                          | PUNTO
+                          | CARACTERES
+                          | SLASH
+                          | MAS
+                          | PREGUNTA
+                          | EXCLAMACION
+                          | O '''
     t[0] = t[1]
 
 #una partida empieza con una jugada y una siguiente jugada (la cual puede ser el score, indicando el final de la partida)
 def p_partida(t): 
     '''partida : jugada sigjugada'''
-    if not (t[1].numeroJugada == 1 and (t[2].numeroJugada == 2 or t[2].numeroJugada == 0)):
-        p_error(t)
-    t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
-
+    if t[2].numeroJugada == -1 :
+        if t[1].numeroJugada != -1:
+            p_error(t)
+        t[0] = MaxLvlContainer(t[1].nivelMaxSinCaptura)
+    else:
+        if not (t[1].numeroJugada == 1 and (t[2].numeroJugada == 2 or t[2].numeroJugada == 0)):
+            p_error(t)
+        t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
+    print(" max  nivel: ", t[0].nivelMaxSinCaptura)
+    
 def p_jugada(t):
-    '''jugada : NUM PUNTO ESPACIO movimiento primerComentario movimiento segundoComentario '''
-    print("Jugada numero", t[1], "se jugo:", t[4], t[6])
+    '''jugada : NUM PUNTO ESPACIO movimiento primerComentario posibleRendicion '''
+    #print("Jugada numero", t[1], "se jugo:", t[4], t[6])
 
-    if t[1] == "9":
-        t[1] = t[1]
+    if t[6].nivel != -1 :
+        t[0] = Jugada(t[1], maxNivel(t[5], t[6]))
+    else:
+        t[0] = Jugada(-int(t[1]), maxNivel(t[5], t[5]))
 
-    t[0] = Jugada(t[1], maxNivel(t[5], t[7]))
+    if t[5].jugada != -1 and t[0].numeroJugada != t[5].jugada:
+        p_error(DescripcionDeError('Comentario con numero equivocado', ''))
+
     if t[0].numeroJugada == 0:
         p_error(t)
 
+def p_posibleRendicion(t):
+    ''' posibleRendicion : movimiento segundoComentario
+                         | Empty score'''
+    if t[1] == '' : 
+        t[0] = Comentario('', -1, -1)
+    else:
+        t[0] = t[2]
+
 def p_sigjugada(t):
     '''sigjugada : jugada sigjugada 
-                 | score'''
-    if t[1].numeroJugada != 0 and not (t[2].numeroJugada == t[1].numeroJugada + 1 or t[2].numeroJugada == 0):
-        p_error(t)
-    #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
-    t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
+                 | score Empty
+                 | Empty Empty'''
+    if t[1] == '' :
+        t[0] = Jugada(-1, -1)
+    else:
+        if t[1].numeroJugada != 0 and not (t[2].numeroJugada==-1 and t[1].numeroJugada < 0) and not (abs(t[2].numeroJugada) == t[1].numeroJugada + 1 or t[2].numeroJugada == 0):
+            p_error(t)
+        #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
+        if t[2] == '':
+            t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
+        else:
+            t[0] = Jugada(t[1].numeroJugada, maxNivel(t[1], t[2]))
         
 def p_movimiento(t):
     ''' movimiento : pieza casillas mate calidad ESPACIO '''
@@ -205,7 +237,7 @@ def p_casillas_OrigenNumero(t):
 
 def p_casillas_Captura(t):
     '''casillas : EQUIS COLUMNA NUM'''
-    t[0] = Casillas(t[1]+t[2]+t[3], int(t[3]))
+    t[0] = Casillas(t[1] + t[2] + t[3], int(t[3]))
 
 def p_casillas_Columna(t):
     '''casillas : COLUMNA NUM destinoPosible Empty
@@ -218,7 +250,6 @@ def p_casillas_Columna(t):
     else:
         t[0] = Casillas(t[1]+t[2]+t[3]+t[4], int(t[4]))
         
-
 def p_destinoPosible(t):
     ''' destinoPosible : captura COLUMNA NUM
                        | Empty Empty Empty'''
@@ -368,15 +399,15 @@ def p_comentario(t):
     
     t[0] = Comentario(t[1] + t[2].mensaje + t[3] , t[2].nivel, t[2].nivelMaxSinCaptura)
     
-    if t[0].nivel != 0 :
-        print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
 
 
 def p_tresPuntos(t):
     ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
                    | Empty'''
     if t[1]=='' : 
-        t[0] = 0
+        t[0] = -1
     else: 
         t[0] = int(t[1])
 
@@ -385,12 +416,12 @@ def p_primerComentario(t):
                          | Empty Empty Empty '''
 
     if(t[1] == ''):
-        t[0] = Comentario('', 0, 0)
+        t[0] = Comentario('', 0, 0, -1)
     else:
-        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
+        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura, t[3])
     
-    if t[0].nivel != 0 :
-        print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
 
 
 def p_segundoComentario(t):
@@ -401,8 +432,8 @@ def p_segundoComentario(t):
     else:
         t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
     
-    if t[0].nivel != 0 :
-        print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+    #if t[0].nivel != 0 :
+        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
@@ -421,8 +452,19 @@ def p_Empty(t):
     t[0] = ''   # El atributo de empty siempre es vacio('') eso nos evita problemas despues
     pass
 
+# Funcion que se ejecuta cuando el parser falla al reconocer una cadena
 def p_error(t):
-    raise RejectStringError(t)
+    if t.value == '"': # Puede faltar el ESPACIO entre los strings de metadata
+        errorMessage = 'Error en ' + t.type + ', falta el espacio en la metadata.'
+    elif t.value == ' ': # Cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+        errorMessage = 'Error en ' + t.type + ', puede ser muchar cosas.'
+    elif t.value == '-': # Puede faltar una O de enroque, puede un NUM del Score o SLASH,
+        errorMessage = 'Error en ' + t.type + ', falta un O en el enrroque.'
+    else:
+        # Error no reconocido
+        errorMessage = t.value
+
+    raise RejectStringError(errorMessage)
     
 parser = yacc.yacc()
 
@@ -527,9 +569,8 @@ testsToRun.append(('''[prueba "loca"]
 
 1. Bxd1 Pa6 0-1''', 1))
 
-# Otras partidas para depues testear
-
-'''[Event "Mannheim"]
+# Test 14:
+testsToRun.append(('''[Event "Mannheim"]
 [Site "Mannheim GER"]
 [Date "1914.08.01"]
 [EventDate "1914.07.20"]
@@ -542,11 +583,12 @@ testsToRun.append(('''[prueba "loca"]
 [BlackElo "?"]
 [PlyCount "45"]
 
-1. e4 {Notes by Richard Reti} 1... e6 2. d4 d5 3. Nc3 Nf6 4. Bg5 Be7 5. e5 Nfd7 6. h4 {This ingenious method of play which has subsequently been adopted by all modern masters is characteristic of Alekhine’s style.} 6... Bxg5 7. hxg5 Qxg5 8. Nh3 {! The short-stepping knight is always brought as near as possible to the actual battle field. Therefore White does not make the plausible move 8 Nf3 but 8 Nh3 so as to get the knight to f4.} 8... Qe7 9. Nf4 Nf8 10. Qg4 f5 {The only move. Not only was 11 Qxg7 threatened but also Nxd5.} 11. exf6 gxf6 12. O-O-O {He again threatens Nxd5.} 12... c6 13. Re1 Kd8 14. Rh6 e5 15. Qh4 Nbd7 16. Bd3 e4 17. Qg3 Qf7 {Forced - the sacrifice of the knight at d5 was threatened and after 17...Qd6 18 Bxe4 dxe4 19 Rxe4 and 20 Qg7 wins.} 18. Bxe4 dxe4 19. Nxe4 Rg8 20. Qa3 {Here, as so often happens, a surprising move and one difficult to have foreseen, forms the kernel of an apparently simple Alekhine combination.} 20... Qg7 {After 20.Qe7 21.Qa5+ b6 22.Qc3 would follow.} 21. Nd6 Nb6 22. Ne8 Qf7 {White mates in three moves.} 23. Qd6+ 1-0'''
+1. e4 {Notes by Richard Reti} 1... e6 2. d4 d5 3. Nc3 Nf6 4. Bg5 Be7 5. e5 Nfd7 6. h4 {This ingenious method of play which has subsequently been adopted by all modern masters is characteristic of Alekhine’s style.} 6... Bxg5 7. hxg5 Qxg5 8. Nh3 {! The short-stepping knight is always brought as near as possible to the actual battle field. Therefore White does not make the plausible move 8 Nf3 but 8 Nh3 so as to get the knight to f4.} 8... Qe7 9. Nf4 Nf8 10. Qg4 f5 {The only move. Not only was 11 Qxg7 threatened but also Nxd5.} 11. exf6 gxf6 12. O-O-O {He again threatens Nxd5.} 12... c6 13. Re1 Kd8 14. Rh6 e5 15. Qh4 Nbd7 16. Bd3 e4 17. Qg3 Qf7 {Forced - the sacrifice of the knight at d5 was threatened and after 17...Qd6 18 Bxe4 dxe4 19 Rxe4 and 20 Qg7 wins.} 18. Bxe4 dxe4 19. Nxe4 Rg8 20. Qa3 {Here, as so often happens, a surprising move and one difficult to have foreseen, forms the kernel of an apparently simple Alekhine combination.} 20... Qg7 {After 20.Qe7 21.Qa5+ b6 22.Qc3 would follow.} 21. Nd6 Nb6 22. Ne8 Qf7 {White mates in three moves.} 23. Qd6+ 1-0''', 1))
 
-'''[a "b"]
+# Test 15:
+testsToRun.append(('''[a "b"]
 
-1. e4 d5 {defensa escandinava (es com´un 2. exd5 Da5 {no es com´un 2... c6})} 1/2-1/2'''
+1. e4 d5 {defensa escandinava (es - comun 2. exd5 Da5 {no es comun 2... c6})} 1/2-1/2''', 1))
 
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
