@@ -2,6 +2,7 @@ import ply.lex as lex
 from ply.lex import LexError, StringTypes, LexToken
 import ply.yacc as yacc
 from funciones_auxiliares import *
+import re
 
 # Tokens
 
@@ -19,17 +20,17 @@ t_RCORCHETE = r'\]'         #pueden faltar las segundas comillas de un segmento 
 
 #CARACTERES se refiere a todos los caracteres que solo se usen para la metaData y comentarios
 t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' 
-t_COMILLA = r'\"'           #puede faltar el ESPACIO entre los strings de metadata
-t_ESPACIO = r'\ '           #cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
-t_MENOS = r'-'              #Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
-t_NUM = r'\d+'              #Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
-t_PUNTO = r'\.'             #puede faltar un NUM para el numero de jugada
-t_PIEZA = r'[P|N|B|R|Q|K]'  #puede faltar un ESPACIO antes de un movimiento
-t_COLUMNA = r'[a-h]'        #puede faltar un espacio antes de un movimiento
-t_SLASH = r'\/'             #puede faltar un NUM del SCORE
-t_MAS = r'\+'               #puede faltar un NUM para un movimiento
-t_PREGUNTA = r'\?'          #puede faltar un NUM para un movimiento
-t_EXCLAMACION = r'!'        #puede faltar un NUM para un movimiento
+t_COMILLA = r'\"'           # puede faltar el ESPACIO entre los strings de metadata
+t_ESPACIO = r'\ '           # cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+t_MENOS = r'-'              # Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
+t_NUM = r'\d+'              # Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
+t_PUNTO = r'\.'             # puede faltar un NUM para el numero de jugada
+t_PIEZA = r'[P|N|B|R|Q|K]'  # puede faltar un ESPACIO antes de un movimiento
+t_COLUMNA = r'[a-h]'        # puede faltar un espacio antes de un movimiento
+t_SLASH = r'\/'             # puede faltar un NUM del SCORE
+t_MAS = r'\+'               # puede faltar un NUM para un movimiento
+t_PREGUNTA = r'\?'          # puede faltar un NUM para un movimiento
+t_EXCLAMACION = r'!'        # puede faltar un NUM para un movimiento
 t_EQUIS = r'x'              # puede faltar un ESPACIO para el movimiento
 t_O = r'O'                  # puede faltar un MENOS del Enroque o un ESPACIO para el Enroque
 t_LPAREN = r'\('            # puede faltar un ESPACIO para el comentario
@@ -38,17 +39,15 @@ t_LLLAVE = r'\{'            # puede faltar un ESPACIO para el comentario
 t_RLLAVE = r'\}'            # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
 
 class Comentario:
-    def __init__(self, mensaje, nivel, maxNivel, jugada=-1):
+    def __init__(self, nivel, maxNivel, jugada=-1):
         self.nivel = nivel
-        self.mensaje = mensaje
         self.nivelMaxSinCaptura = maxNivel
         self.jugada = jugada
 
 
 class Seguimiento:
-    def __init__(self, mensaje, captura):
+    def __init__(self, captura):
         self.tieneCaptura = captura
-        self.mensaje = mensaje
 
 class Jugada: 
     def __init__(self, numJugada, maxNivel):
@@ -60,8 +59,7 @@ class MaxLvlContainer:
         self.nivelMaxSinCaptura = int(maxNivel)
 
 class Casillas:
-    def __init__(self, mensaje, numeroDeFila):
-        self.mensaje = mensaje       
+    def __init__(self, numeroDeFila):   
         self.numeroDeFila = int(numeroDeFila)
 
 class DescripcionDeError:
@@ -87,7 +85,21 @@ precedence = ()
 def p_s(t):
     '''s : file'''
     t[0] = t[1]
-    print('Maximo nivel sin captura: ', t[0].nivelMaxSinCaptura, '.')  
+    print('''
+━━━━━-╮
+╰┃ ┣▇━▇
+┃ ┃  ╰━▅╮
+╰┳╯ ╰━━┳╯F A S I L I T O
+╰╮ ┳━━╯ E L T U T O R I A L
+▕▔▋ ╰╮╭━╮
+╱▔╲▋╰━┻┻╮╲╱▔▔▔╲
+▏  ▔▔▔▔▔▔▔  O O┃
+╲╱▔╲▂▂▂▂╱▔╲▂▂▂╱
+▏╳▕▇▇▕ ▏╳▕▇▇▕
+╲▂╱╲▂╱ ╲▂╱╲▂╱
+
+    ''')
+    print('Maximo nivel sin captura: ', t[0].nivelMaxSinCaptura, '.', sep='')  
 
 def p_file(t):
     '''file : metadataInicio file
@@ -97,8 +109,6 @@ def p_file(t):
     else:
         t[0] = MaxLvlContainer(maxNivel(t[1], t[2]))
     
-        
-
 def p_metadataInicio(t):
     '''metadataInicio : LCORCHETE metadata RCORCHETE metadataSegment partida'''
     t[0] = MaxLvlContainer(t[5].nivelMaxSinCaptura)
@@ -110,7 +120,6 @@ def p_metadataSegment_MetaData(t):
 
 def p_metadata_renglonMetaData(t):
     '''metadata : stringMeta1 ESPACIO COMILLA stringMeta2 COMILLA'''
-    #print(t[1] + ' ' + '"' + t[4] + '"')
 
 #Para parsear las cosas escritas usamos una recursion sobre los distintos tokens que se pueden encontrar
 def p_stringMeta_escritoEnPrimerElementoMetadata(t):
@@ -164,17 +173,16 @@ def p_partida(t):
     '''partida : jugada sigjugada'''
     if t[2].numeroJugada == -1 :
         if t[1].numeroJugada != -1:
-            p_error(t)
+            p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
         t[0] = MaxLvlContainer(t[1].nivelMaxSinCaptura)
     else:
         if not (t[1].numeroJugada == 1 and (t[2].numeroJugada == 2 or t[2].numeroJugada == 0)):
-            p_error(t)
+            p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
         t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
-    print(" max  nivel: ", t[0].nivelMaxSinCaptura)
     
 def p_jugada(t):
     '''jugada : NUM PUNTO ESPACIO movimiento primerComentario posibleRendicion '''
-    #print("Jugada numero", t[1], "se jugo:", t[4], t[6])
+
 
     if t[6].nivel != -1 :
         t[0] = Jugada(t[1], maxNivel(t[5], t[6]))
@@ -185,13 +193,13 @@ def p_jugada(t):
         p_error(DescripcionDeError('Comentario con numero equivocado', ''))
 
     if t[0].numeroJugada == 0:
-        p_error(t)
+        p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
 
 def p_posibleRendicion(t):
     ''' posibleRendicion : movimiento segundoComentario
                          | Empty score'''
     if t[1] == '' : 
-        t[0] = Comentario('', -1, -1)
+        t[0] = Comentario(-1, -1)
     else:
         t[0] = t[2]
 
@@ -203,7 +211,7 @@ def p_sigjugada(t):
         t[0] = Jugada(-1, -1)
     else:
         if t[1].numeroJugada != 0 and not (t[2].numeroJugada==-1 and t[1].numeroJugada < 0) and not (abs(t[2].numeroJugada) == t[1].numeroJugada + 1 or t[2].numeroJugada == 0):
-            p_error(t)
+            p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
         #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
         if t[2] == '':
             t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
@@ -212,11 +220,11 @@ def p_sigjugada(t):
         
 def p_movimiento(t):
     ''' movimiento : pieza casillas mate calidad ESPACIO '''
-    t[0] = t[1] + t[2].mensaje + t[3] + t[4]
+    
     
     numCasilla = t[2].numeroDeFila
     if numCasilla == 0 or numCasilla >= 9:
-        p_error(t)
+        p_error(DescripcionDeError('Numero de casilla invalido', str(numCasilla)))
 
 def p_movimiento_erroqueLargo(t):
     '''movimiento : O MENOS O MENOS O ESPACIO'''
@@ -233,30 +241,30 @@ def p_pieza(t):
 
 def p_casillas_OrigenNumero(t):
     '''casillas : NUM captura COLUMNA NUM'''
-    t[0] = Casillas(t[1] + t[2] + t[3] + t[4], int(t[4]))
+    t[0] = Casillas(int(t[4]))
 
 def p_casillas_Captura(t):
     '''casillas : EQUIS COLUMNA NUM'''
-    t[0] = Casillas(t[1] + t[2] + t[3], int(t[3]))
+    t[0] = Casillas(int(t[3]))
 
 def p_casillas_Columna(t):
     '''casillas : COLUMNA NUM destinoPosible Empty
                 | COLUMNA captura COLUMNA NUM'''
     if t[4] == '' : 
         if t[3].numeroDeFila == 0 :
-            t[0] = Casillas(t[1] + t[2], t[2])
+            t[0] = Casillas(t[2])
         else: 
-            t[0] = Casillas(t[1] + t[2] + t[3].mensaje, t[3].numeroDeFila)
+            t[0] = Casillas(t[3].numeroDeFila)
     else:
-        t[0] = Casillas(t[1]+t[2]+t[3]+t[4], int(t[4]))
+        t[0] = Casillas(int(t[4]))
         
 def p_destinoPosible(t):
     ''' destinoPosible : captura COLUMNA NUM
                        | Empty Empty Empty'''
     if t[3] == '' : 
-        t[0] = Casillas('', 0)
+        t[0] = Casillas(0)
     else:
-        t[0] = Casillas(t[1] + t[2] + t[3], t[3])
+        t[0] = Casillas(t[3])
         
 def p_captura(t):
     '''captura : EQUIS
@@ -280,13 +288,10 @@ def p_primerComentario(t):
                          | Empty Empty Empty '''
 
     if(t[1] == ''):
-        t[0] = Comentario('', 0, 0, -1)
+        t[0] = Comentario(0, 0, -1)
     else:
-        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura, t[3])
+        t[0] = Comentario(t[1].nivel, t[1].nivelMaxSinCaptura, t[3])
     
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
-
 def p_tresPuntos(t):
     ''' tresPuntos : NUM PUNTO PUNTO PUNTO ESPACIO
                    | Empty'''
@@ -299,22 +304,16 @@ def p_segundoComentario(t):
     ''' segundoComentario : comentario ESPACIO
                           | Empty Empty '''
     if(t[1] == ''):
-        t[0] = Comentario('', 0, 0)
+        t[0] = Comentario(0, 0)
     else:
-        t[0] = Comentario(t[1].mensaje + t[2], t[1].nivel, t[1].nivelMaxSinCaptura)
-    
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
+        t[0] = Comentario(t[1].nivel, t[1].nivelMaxSinCaptura)
             
 def p_comentario(t):
     ''' comentario : LPAREN contenidoComentario RPAREN 
                    | LLLAVE contenidoComentario RLLAVE '''
     
-    t[0] = Comentario(t[1] + t[2].mensaje + t[3] , t[2].nivel, t[2].nivelMaxSinCaptura)
-    
-    #if t[0].nivel != 0 :
-        #print("Comentario: ", t[0].mensaje, ". Con nivel: ", t[0].nivel, "y max coment sin capturas: ", t[0].nivelMaxSinCaptura)
-        
+    t[0] = Comentario(t[2].nivel, t[2].nivelMaxSinCaptura)
+           
 def p_contenidoComentario(t):
     ''' contenidoComentario : palabraComentario ESPACIO contenidoComentario
                           | palabraComentario Empty Empty Empty'''
@@ -325,9 +324,9 @@ def p_contenidoComentario(t):
         maximo_nivelCaptura = max(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
         minimo_nivelCaptura = min(t[1].nivelMaxSinCaptura, t[3].nivelMaxSinCaptura)
         if maximo_nivelCaptura == 1 and minimo_nivelCaptura == 0 :
-            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, 0)
+            t[0] = Comentario(maximo_nivel, 0)
         else :
-            t[0] = Comentario(t[1].mensaje + t[2] + t[3].mensaje, maximo_nivel, maximo_nivelCaptura)
+            t[0] = Comentario(maximo_nivel, maximo_nivelCaptura)
 
 def p_palabraComentario_escritoEnComentarios(t):
     '''palabraComentario : caracteresnormales Empty stringComentario
@@ -337,24 +336,24 @@ def p_palabraComentario_escritoEnComentarios(t):
                          | NUM seguimientoOrigenNum Empty
                          | comentario Empty Empty'''
     if t[3] != '':
-        t[0] = Comentario(t[1]+t[3].mensaje, t[3].nivel, t[3].nivelMaxSinCaptura)
+        t[0] = Comentario( t[3].nivel, t[3].nivelMaxSinCaptura)
     elif t[2] == '' :
         nivelSinCaptura = 0
 
         if t[1].nivelMaxSinCaptura != 0 :
             nivelSinCaptura = t[1].nivelMaxSinCaptura + 1
 
-        t[0] = Comentario(t[1].mensaje, t[1].nivel, nivelSinCaptura)
+        t[0] = Comentario( t[1].nivel, nivelSinCaptura)
     else:
-        t[0] = Comentario(t[1]+t[2].mensaje, 1, 1-int(t[2].tieneCaptura))
+        t[0] = Comentario(1, 1-int(t[2].tieneCaptura))
 
 def p_stringComentario_delStringComent(t):
     '''stringComentario : contenidoStringComentario stringComentario
                         | Empty Empty'''
     if t[2] == '' :
-        t[0] = Comentario('', 1, 1)
+        t[0] = Comentario(1, 1)
     else :
-        t[0] = Comentario(t[1] + t[2].mensaje, 1, 1)
+        t[0] = Comentario(1, 1)
 
 def p_contenidoStringComentario(t):
     '''contenidoStringComentario : caracteresnormales
@@ -374,11 +373,11 @@ def p_seguimientoPieza(t):
                         | Empty Empty Empty '''
     if t[2] == '':
         if t[1] == '' :
-            t[0] = Seguimiento('', False)
+            t[0] = Seguimiento(False)
         else:
-            t[0] = Seguimiento(t[1] + t[3].mensaje, False)
+            t[0] = Seguimiento(False)
     else:
-        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
+        t[0] = Seguimiento( t[2].tieneCaptura)
 
 def p_seguimientoOrigenCasilla(t):
     '''seguimientoOrigenCasilla : EQUIS seguimientoCaptura Empty
@@ -389,11 +388,11 @@ def p_seguimientoOrigenCasilla(t):
                                 | Empty Empty Empty'''
     if t[2] == '':
         if t[1] == '' :
-            t[0] = Seguimiento('', False)
+            t[0] = Seguimiento(False)
         else:
-            t[0] = Seguimiento(t[1] + t[3].mensaje, False)
+            t[0] = Seguimiento(False)
     else:
-        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
+        t[0] = Seguimiento(t[2].tieneCaptura)
 
 def p_seguimientoOrigenNum(t):
     ''' seguimientoOrigenNum : EQUIS seguimientoCaptura
@@ -404,11 +403,11 @@ def p_seguimientoOrigenNum(t):
                              | Empty Empty   '''
     if t[2] != 'x':
         if t[1] == '' :
-            t[0] = Seguimiento('', False)
+            t[0] = Seguimiento(False)
         else:
-            t[0] = Seguimiento(t[1] + t[2].mensaje, False)
+            t[0] = Seguimiento( False)
     else:
-        t[0] = Seguimiento(t[1]+t[2].mensaje, t[2].tieneCaptura)
+        t[0] = Seguimiento( t[2].tieneCaptura)
 
 def p_seguimientoCaptura(t):
     '''seguimientoCaptura : COLUMNA NUM mate seguimientoMovConCaptura
@@ -420,33 +419,33 @@ def p_seguimientoCaptura(t):
 
     if t[4] == '' :
         if t[1] == '' :
-            t[0] = Seguimiento('', False)
+            t[0] = Seguimiento(False)
         else :
-            t[0] = Seguimiento(t[1] + t[2].mensaje, False)
+            t[0] = Seguimiento(False)
     else:
-        t[0] = Seguimiento(t[1]+t[2]+t[3]+t[4].mensaje, t[4].tieneCaptura)
+        t[0] = Seguimiento(t[4].tieneCaptura)
 
 def p_seguimientoMovConCaptura(t):
     ''' seguimientoMovConCaptura : contenidoStringComentario stringComentario
                                  | Empty Empty '''
     if t[2] == '' :
-        t[0] = Seguimiento('', True)
+        t[0] = Seguimiento(True)
     else : 
-        t[0] = Seguimiento(t[1] + t[2].mensaje, False)
+        t[0] = Seguimiento( False)
 
 
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
     t[0] = Jugada(0, 0)
     if int(t[1]) > 1 or int(t[3]) > 1:
-        p_error(t)
+        p_error(DescripcionDeError('Score invalido', f'{t[1]}{t[2]}{t[3]}' ) )
 
 def p_score_fraccion(t):
     '''score : NUM SLASH NUM MENOS NUM SLASH NUM'''
     t[0] = Jugada(0, 0)
-    if not (int(t[1]) == 1 and int(t[3]) == 2 and int(t[5]) == 1 and int(t[7]) == 2) :
-        p_error(t)
-
+    if not (int(t[1]) == 1 and int(t[3]) == 2 and int(t[5]) == 1 and int(t[7]) == 2):
+        p_error(DescripcionDeError('Score invalido', f'{t[1]}{t[2]}{t[3]}{t[4]}{t[5]}{t[6]}{t[2]}'))
+            
 def p_Empty(t):
     ''' Empty :'''
     t[0] = ''   # El atributo de empty siempre es vacio('') eso nos evita problemas despues
@@ -454,29 +453,63 @@ def p_Empty(t):
 
 # Funcion que se ejecuta cuando el parser falla al reconocer una cadena
 def p_error(t):
+
+
     if t.value == '"': # Puede faltar el ESPACIO entre los strings de metadata
-        errorMessage = 'Error en ' + t.type + ', falta el espacio en la metadata.'
+        errorMessage = f'Error en {t.type}, falta el espacio en la metadata.'
     elif t.value == ' ': # Cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
-        errorMessage = 'Error en ' + t.type + ', puede ser muchar cosas.'
+        errorMessage = f'Error en {t.type}, pueden ser muchar cosas.'
     elif t.value == '-': # Puede faltar una O de enroque, puede un NUM del Score o SLASH,
-        errorMessage = 'Error en ' + t.type + ', falta un O en el enrroque.'
-    else:
-        # Error no reconocido
-        errorMessage = t.value
+        errorMessage = f'Error en {t.type}, falta un O en el enrroque.'
+    elif t.value == "[":
+        errorMessage = f'Error en {t.type}, falta el ] de un segmento en la metadata'
+    elif t.value ==   "]" : 
+        errorMessage = f'Error en {t.type}, faltan las comillas de un segmento de la metadata'
+    elif re.compile(r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' ).match(t.value):
+        errorMessage = "Error en los caracteres"
+    elif re.compile(r'\d+').match(t.value) : 
+        errorMessage = f'Error en {t.type}, Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA'    
+    elif t.value == "." : 
+        errorMessage = f'Error en {t.type}, puede faltar un NUM para el numero de jugada'
+    elif re.compile(r'[P|N|B|R|Q|K|a-h]').match(t.value) and len(t.value) == 1:
+        errorMessage = f'Error en {t.type}, falta un espacio antes del movimiento.'
+    elif t.value == "/":
+        errorMessage = f'Error en {t.type}, falta un numero en el score de la partida.'
+    elif t.value == "+" or t.value == "?" or t.value == "!":
+        errorMessage = f'Error en {t.type}, falta el numero de casilla de movimiento.'
+    elif t.value == "x":
+        errorMessage = f'Error en {t.type}, falta un espacio en un movimiento.'
+    elif t.value == "O":
+        errorMessage = f'Error en {t.type}, falta un menos en el enrroque o se esperaba un espacio antes del enroque.'
+    elif t.value == ")":
+        errorMessage = f'Error en {t.type}, falta texto dentro del comentario o falta un cierre de parentesis.'
+    elif t.value == "{" or t.value == "(":
+        errorMessage = f'Error en {t.type}, falta un espacio en el comentario.'
+    elif t.value == "}":
+        errorMessage = f'Error en {t.type}, falta texto dentro del comentario o falta un cierre de llaves.'
+    
+    # Errores de atributos
+    elif t.value == 'Numero incorrecto':
+        errorMessage = f'Error en {t.type}, los numeros de jugada tienene que ser consecutivos.'
+    elif t.value == 'Numero de casilla invalido':
+        errorMessage = f'Error en {t.type}, Numero de casilla invalido.'
+    elif t.value == 'Score invalido':
+        errorMessage = f'Error en {t.type}, score invalido.'
+    else: # Error no reconocido
+        errorMessage = f'Error en {t.type}'
 
     raise RejectStringError(errorMessage)
     
 parser = yacc.yacc()
 
-"""while 1:
-    try:
-        s = raw_input('Partida > ')
-    except EOFError:
-        break
-    if not s:
-        continue
-    parser.parse(s)"""
 
+'''try:
+    s = input('Path del archivo con la entrada: ')
+    with open(s, 'r') as file:
+        partida = file.read()
+        parser.parse(partida)
+except EOFError:    
+    print("Error en la entrada de datos.")'''
 
 
 # Cada test es una tupla (string a correr, valor esperado (puede ser 1 o -1))
@@ -597,3 +630,5 @@ testsToRun.append(('''[a "b"]
 # Se puede descomentar una linea en runTest para que los test sean los paths
 # a los txt y no la cadena directa a parsear
 runTests(testsToRun, parser.parse)
+
+
