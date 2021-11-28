@@ -10,7 +10,7 @@ tokens = (
     'CARACTERES', 
     'LCORCHETE' , 'RCORCHETE',
     'COMILLA', 'ESPACIO' , 'newline',
-    'MENOS', 'NUM', 'PUNTO', 'COLUMNA', 'PIEZA' , 'SLASH',
+    'MENOS', 'NUM', 'PUNTO', 'FILALETRA', 'PIEZA' , 'SLASH',
     'MAS', 'PREGUNTA', 'EXCLAMACION', 'EQUIS', 'O',
     'LPAREN', 'RPAREN', 'LLLAVE', 'RLLAVE'
 )
@@ -21,12 +21,12 @@ t_RCORCHETE = r'\]'         #pueden faltar las segundas comillas de un segmento 
 #CARACTERES se refiere a todos los caracteres que solo se usen para la metaData y comentarios
 t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' 
 t_COMILLA = r'\"'           # puede faltar el ESPACIO entre los strings de metadata
-t_ESPACIO = r'\ '           # cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+t_ESPACIO = r'\ '           # cierre de un comentario exterior }), NUM o FILALETRA de un movimiento, puede faltar un PUNTO
 t_MENOS = r'-'              # Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
-t_NUM = r'\d+'              # Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
+t_NUM = r'\d+'              # Puede faltar la FILALETRA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
 t_PUNTO = r'\.'             # puede faltar un NUM para el numero de jugada
 t_PIEZA = r'[P|N|B|R|Q|K]'  # puede faltar un ESPACIO antes de un movimiento
-t_COLUMNA = r'[a-h]'        # puede faltar un espacio antes de un movimiento
+t_FILALETRA = r'[a-h]'        # puede faltar un espacio antes de un movimiento
 t_SLASH = r'\/'             # puede faltar un NUM del SCORE
 t_MAS = r'\+'               # puede faltar un NUM para un movimiento
 t_PREGUNTA = r'\?'          # puede faltar un NUM para un movimiento
@@ -115,7 +115,8 @@ def p_metadataInicio(t):
 
 #El segmento de metadata hace recursión hasta terminar en una partida
 def p_metadataSegment_MetaData(t):
-    '''metadataSegment : LCORCHETE metadata RCORCHETE metadataSegment
+    '''metadataSegment : LCORCHETE metadata RCORCHETE metadataSegment newline
+                       | LCORCHETE metadata RCORCHETE metadataSegment
                        | Empty '''
 
 def p_metadata_renglonMetaData(t):
@@ -131,7 +132,7 @@ def p_contenidoMeta1_delStringMeta1(t):
     '''contenidoMeta1 : caracteresnormales
                       | EQUIS
                       | NUM
-                      | COLUMNA
+                      | FILALETRA
                       | PIEZA
                       | LPAREN
                       | RPAREN
@@ -148,7 +149,7 @@ def p_contenidoMeta2_delStringMeta2(t):
     '''contenidoMeta2 : caracteresnormales
                       | EQUIS
                       | NUM
-                      | COLUMNA
+                      | FILALETRA
                       | PIEZA
                       | ESPACIO
                       | LPAREN
@@ -240,16 +241,16 @@ def p_pieza(t):
     t[0] = t[1]
 
 def p_casillas_OrigenNumero(t):
-    '''casillas : NUM captura COLUMNA NUM'''
+    '''casillas : NUM captura FILALETRA NUM'''
     t[0] = Casillas(int(t[4]))
 
 def p_casillas_Captura(t):
-    '''casillas : EQUIS COLUMNA NUM'''
+    '''casillas : EQUIS FILALETRA NUM'''
     t[0] = Casillas(int(t[3]))
 
 def p_casillas_Columna(t):
-    '''casillas : COLUMNA NUM destinoPosible Empty
-                | COLUMNA captura COLUMNA NUM'''
+    '''casillas : FILALETRA NUM destinoPosible Empty
+                | FILALETRA captura FILALETRA NUM'''
     if t[4] == '' : 
         if t[3].numeroDeFila == 0 :
             t[0] = Casillas(t[2])
@@ -259,7 +260,7 @@ def p_casillas_Columna(t):
         t[0] = Casillas(int(t[4]))
         
 def p_destinoPosible(t):
-    ''' destinoPosible : captura COLUMNA NUM
+    ''' destinoPosible : captura FILALETRA NUM
                        | Empty Empty Empty'''
     if t[3] == '' : 
         t[0] = Casillas(0)
@@ -332,7 +333,7 @@ def p_palabraComentario_escritoEnComentarios(t):
     '''palabraComentario : caracteresnormales Empty stringComentario
                          | EQUIS Empty stringComentario 
                          | PIEZA seguimientoPieza Empty
-                         | COLUMNA seguimientoOrigenCasilla Empty
+                         | FILALETRA seguimientoOrigenCasilla Empty
                          | NUM seguimientoOrigenNum Empty
                          | comentario Empty Empty'''
     if t[3] != '':
@@ -358,14 +359,14 @@ def p_stringComentario_delStringComent(t):
 def p_contenidoStringComentario(t):
     '''contenidoStringComentario : caracteresnormales
                                  | EQUIS
-                                 | COLUMNA
+                                 | FILALETRA
                                  | PIEZA
                                  | NUM'''
     t[0] = t[1]
 
 
 def p_seguimientoPieza(t):
-    '''seguimientoPieza : COLUMNA seguimientoOrigenCasilla Empty
+    '''seguimientoPieza : FILALETRA seguimientoOrigenCasilla Empty
                         | NUM seguimientoOrigenNum Empty
                         | caracteresnormales Empty stringComentario
                         | EQUIS Empty stringComentario
@@ -383,7 +384,7 @@ def p_seguimientoOrigenCasilla(t):
     '''seguimientoOrigenCasilla : EQUIS seguimientoCaptura Empty
                                 | NUM seguimientoOrigenNum Empty
                                 | caracteresnormales Empty stringComentario
-                                | COLUMNA Empty stringComentario
+                                | FILALETRA Empty stringComentario
                                 | PIEZA Empty stringComentario
                                 | Empty Empty Empty'''
     if t[2] == '':
@@ -399,7 +400,7 @@ def p_seguimientoOrigenNum(t):
                              | caracteresnormales stringComentario
                              | PIEZA stringComentario 
                              | NUM stringComentario
-                             | COLUMNA stringComentario
+                             | FILALETRA stringComentario
                              | Empty Empty   '''
     if t[2] != 'x':
         if t[1] == '' :
@@ -410,7 +411,7 @@ def p_seguimientoOrigenNum(t):
         t[0] = Seguimiento( t[2].tieneCaptura)
 
 def p_seguimientoCaptura(t):
-    '''seguimientoCaptura : COLUMNA NUM mate seguimientoMovConCaptura
+    '''seguimientoCaptura : FILALETRA NUM mate seguimientoMovConCaptura
                           | caracteresnormales stringComentario Empty Empty
                           | EQUIS stringComentario Empty Empty
                           | PIEZA stringComentario Empty Empty
@@ -457,7 +458,7 @@ def p_error(t):
 
     if t.value == '"': # Puede faltar el ESPACIO entre los strings de metadata
         errorMessage = f'Error en {t.type}, falta el espacio en la metadata.'
-    elif t.value == ' ': # Cierre de un comentario exterior }), NUM o COLUMNA de un movimiento, puede faltar un PUNTO
+    elif t.value == ' ': # Cierre de un comentario exterior }), NUM o FILALETRA de un movimiento, puede faltar un PUNTO
         errorMessage = f'Error en {t.type}, pueden ser muchar cosas.'
     elif t.value == '-': # Puede faltar una O de enroque, puede un NUM del Score o SLASH,
         errorMessage = f'Error en {t.type}, falta un O en el enrroque.'
@@ -468,7 +469,7 @@ def p_error(t):
     elif re.compile(r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' ).match(t.value):
         errorMessage = "Error en los caracteres"
     elif re.compile(r'\d+').match(t.value) : 
-        errorMessage = f'Error en {t.type}, Puede faltar la COLUMNA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA'    
+        errorMessage = f'Error en {t.type}, Puede faltar la FILALETRA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA'    
     elif t.value == "." : 
         errorMessage = f'Error en {t.type}, puede faltar un NUM para el numero de jugada'
     elif re.compile(r'[P|N|B|R|Q|K|a-h]').match(t.value) and len(t.value) == 1:
@@ -502,133 +503,10 @@ def p_error(t):
     
 parser = yacc.yacc()
 
-
-'''try:
+try:
     s = input('Path del archivo con la entrada: ')
     with open(s, 'r') as file:
         partida = file.read()
         parser.parse(partida)
 except EOFError:    
-    print("Error en la entrada de datos.")'''
-
-
-# Cada test es una tupla (string a correr, valor esperado (puede ser 1 o -1))
-testsToRun = []
-
-# Test 1: muchas lineas de metadata
-testsToRun.append(('''[prueba "loca"]
-[Nzscf5qWgtg~NVX "56B~n~nQIeAhy"]
-[gvk7dXkliRpR "2LAkQJGhz81"]
-[~NFS5lBHW4Mm~NmJsP "e4ZhVulzl"]
-
-[GArzOdNa~nITcsbFO9ES "WUodxeqxI"]
-
-1. a4 e3 1-0''', 1))
-
-# Test 2: Metadata sin espacio ni comillas de apertura falla
-testsToRun.append(('''[prueba "loca"]
-[pruebaloca"]
-
-1. a4 e3 1-0''', -1))
-
-# Test 3: mataData con corchetes sin cerrar falla
-testsToRun.append(('''[prueba "loca"
-pruebaloca"]
-
-1. a4 e3 1-0''', -1))
-
-# Test 4: Empate
-testsToRun.append(('''[prueba "loca"]
-1. a4 e3 1/2-1/2''', 1))
-
-# Test 5: multiples jugadas con jaque, mate y modificadores
-testsToRun.append(('''[prueba "loca"]
-1. a4! e3+? 2. a4 h3++ 3. a5 b2 0-1''', 1))
-
-# Test 6: movimientos con capturas y con origenes
-testsToRun.append(('''[prueba "loca"]
-1. a4! Bxg5 2. Ka4 h3++ 3. Nbd7 N2d4 0-1''', 1))
-
-# Test 7: partida con enrroque corto y largo
-testsToRun.append(('''[prueba "loca"]
-1. a4! Bxg5 2. O-O h3++ 3. O-O-O N2d4 0-1''', 1))
-
-# Test 8: partida con parentesis y llaves en los strings y comentarios
-testsToRun.append(('''[prueba "loca"]
-1. a4! (aisjdoaijdqoiwdj31124oqjd13jiqdjq) Bxg5 {sakdasidasda8g+sdi} 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ} N2d4 0-1''', 1))
-
-# Test 9: partida con comentarios dentro de comentarios
-testsToRun.append(('''[test9 "loca"]
-1. a4! (aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq) Bxg5 {sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi)} 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 {odaoausd0} sds3 (lsaks iji ksdi)}} N2d4 0-1''', 1))
-
-# Test 10: partida con comentarios con capturas dentro
-testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 2. O-O h3++ 3. O-O-O {Bxg5 JUH775753DdffP-+KJ {dqdoi {Bxg5} sds3 (lsaks iji Bxg5 ksdi)}} N2d4 0-1''', 1))
-
-# Test 11: Multiples partidas en un archivo
-testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 0-1
-
-[test "loca"]
-1. a4! (Bxg5 h3++) Bxg5 2. a5 a6 0-1
-''', 1))
-
-# Test 12: Comentario con 3 puntos
-testsToRun.append(('''[test "loca"]
-1. a4! (Bxg5 h3++) 1... Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 2. a2! (maravillosa jugada) 2... e5 0-1''', 1))
-
-# Test 13:
-testsToRun.append(('''[prueba "loca"]
-[Nzscf5qWgtg~NVX "56B~n~nQIeAhy"]
-[gvk7dXkliRpR "2LAkQJGhz81"]
-[~NFS5lBHW4Mm~NmJsP "e4ZhVulzl"]
-[yZ1PSI4r78KP "XwWzscEtUqkAu~nNt7Hq5"]
-[GArzOdNa~nITcsbFO9ES "WUodxeqxI"]
-
-1. 1d7 d7 2. Rf8 gg7 1-0
-
-[2ujZrN6LTmOBGss5jzqw "pnAGk"]
-[kRM "lihgftp5kLaiAvuNSub2"]
-[vUPhgAiKx "a9C7isOkq0vyep7svNE"]
-[Lbfh "j6htrD1wKNFryNGHdUcG"]
-
-1. Pxe7 Pad3 2. Be6 b6 3. Bb2 h3 4. Qc1 Kh3 5. Pb1 Pb2 6. Ra1 a7! 7. Nce4 Qxa3 8. Kd4 Qh1 9. Kd8 fh6 10. Nc1 Pg1 11. Nh2 Bf4 12. ca6 Kd8 13. Nb4 d5 14. e1 Ra5 15. f8 K5xd3 16. b6 (Ka4 h 5a2) 16... g7 17. e5 Bg2 18. f3 Re2 19. Qc6 Kb4 20. Rg4 Rg3 21. g3 N2c7 22. Pb7 Rh7 23. Qd3 {bf8 B b3 K Nxf5 wuFzW c1 Pbd2 T c8 ka Pg3 K Ke6+ n Kg5 Pb7 f8 e2 O 1c5 Rxe4 Pxc5} 23... e6 24. d5 Nh7 25. Qxc6 Bxc3 26. Bf5 Qfa3 27. f4 Ka7 28. Nxb6 d6 29. Bg1 Qf2 30. Pb3 d6 31. Ba3 e7 32. Bab4 Kda1 33. Ph1 e2 34. cf4 Nxd7 35. Nc7 (gr Pfg2 iONp utl Pcd2 t (Pd3 Rc2 Bxd6 Kxg8 Kxh2 h6 Bxc8 zAx g2 qX Nh2 N c3 ~n Bxb5 D Nd1 h8 a1 c7 PVAO Rg7 g5 Kb6 oGq) rt Pf8 Qp) 35... e2 36. Ra6 Bhb8 37. Q5a4 c5 38. Qg7 g1 39. g6 Pg7 40. Kd6 d1 41. h7+ Kcc5 42. Qd8 ce1 43. Qxh3 Pa6 44. Bxe2 e4 45. Bh7 d2+ 1/2-1/2
-
-[BYsR4sFynE2R~n2 "lNykA4WPhvh2kKPTjfaD"]
-[loCuhQ "WDOTwZIISKjDik~n6"]
-1. Pb7 ec6 2. f4 Nxf7 3. Kxe5 d7 4. Kc7 Rd6 5. e7 Qc7 6. h1 {sRxb7 iI d5 Nh7} 6... e4+ 7. 7d6 Nf7a3 8. Pa7 e2 9. h8 h4 10. g8 Kxf6 11. 2b3 Bxg3 12. Q5h1 Pb6 13. fd4 e5 14. 5c6 f3 15. cb6 {lPb6} 15... Pb1 16. Nb3 h7 17. b2 Nb7 18. Ra1 N8h6 19. f2 c8 20. P5g1 e1 21. Pg3 c3 22. f5 Kh1 23. Pd7 Nf3 24. Nd1 Rd1 25. Kd5 Ng8 26. e3 Nxg6 27. Rh8 fc3 28. Kxf1 Ncc4 29. c1+ e3 30. cc6 (aKdxa3 e7 JQ Qe2 VLzeFq c7 FU f4 N Qxb7 Nd8++ Tf Nd2 yN ba2 me1b6 hu Kd7 R Pxe6 Nxg7 DaR Ba8 Kxd5 Nd7 ttxI fe7 GK a2 m f6 Skp) 30... h8 31. Qh1 a1 32. fb7 b7 0-1
-
-[4e "ws20"]
-
-1. Bxd1 Pa6 0-1''', 1))
-
-# Test 14:
-testsToRun.append(('''[Event "Mannheim"]
-[Site "Mannheim GER"]
-[Date "1914.08.01"]
-[EventDate "1914.07.20"]
-[Round "11"]
-[Result "1-0"]
-[White "Alexander Alekhine"]
-[Black "Hans Fahrni"]
-[ECO "C13"]
-[WhiteElo "?"]
-[BlackElo "?"]
-[PlyCount "45"]
-
-1. e4 {Notes by Richard Reti} 1... e6 2. d4 d5 3. Nc3 Nf6 4. Bg5 Be7 5. e5 Nfd7 6. h4 {This ingenious method of play which has subsequently been adopted by all modern masters is characteristic of Alekhine’s style.} 6... Bxg5 7. hxg5 Qxg5 8. Nh3 {! The short-stepping knight is always brought as near as possible to the actual battle field. Therefore White does not make the plausible move 8 Nf3 but 8 Nh3 so as to get the knight to f4.} 8... Qe7 9. Nf4 Nf8 10. Qg4 f5 {The only move. Not only was 11 Qxg7 threatened but also Nxd5.} 11. exf6 gxf6 12. O-O-O {He again threatens Nxd5.} 12... c6 13. Re1 Kd8 14. Rh6 e5 15. Qh4 Nbd7 16. Bd3 e4 17. Qg3 Qf7 {Forced - the sacrifice of the knight at d5 was threatened and after 17...Qd6 18 Bxe4 dxe4 19 Rxe4 and 20 Qg7 wins.} 18. Bxe4 dxe4 19. Nxe4 Rg8 20. Qa3 {Here, as so often happens, a surprising move and one difficult to have foreseen, forms the kernel of an apparently simple Alekhine combination.} 20... Qg7 {After 20.Qe7 21.Qa5+ b6 22.Qc3 would follow.} 21. Nd6 Nb6 22. Ne8 Qf7 {White mates in three moves.} 23. Qd6+ 1-0''', 1))
-
-# Test 15:
-testsToRun.append(('''[a "b"]
-
-1. e4 d5 {defensa escandinava (es - comun 2. exd5 Da5 {no es comun 2... c6})} 1/2-1/2''', 1))
-
-# Test 16: probando que los numeros en los puntos son coherentes
-testsToRun.append(('''[a "b"]
-
-1. e4 (que carajo hizo??) 2... d5 {defensa escandinava (es - comun 2. exd5 Da5 {no es comun 2... c6})} 1/2-1/2''', -1))
-# Se puede descomentar una linea en runTest para que los test sean los paths
-# a los txt y no la cadena directa a parsear
-runTests(testsToRun, parser.parse)
-
-
+    print("Error en la entrada de datos.")
