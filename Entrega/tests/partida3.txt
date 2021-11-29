@@ -1,0 +1,8 @@
+[partidaNueva "partida"]
+[jugador1 "blancas"]
+[jugador2 "negras"]
+[hora "ahora"]
+[aerguynrg "partida con comentarios"]
+[maximoNivelSinCapturas "es 3"]
+
+1. a4! (aisjdoaijdqoiwdj Pe6 31124oqjd13jiqdjq) Bxg5 {sakdasid Bxg5!+ asdasdi (asdjas324jsadi3j qefi)} 2. O-O h3++ 3. O-O-O {sdlajsid JUH775753DdffP-+KJ {dqdoi h3++ sajd8998 {odaoausd0} sds3 (lsaks iji ksdi)}} N2d4 0-1

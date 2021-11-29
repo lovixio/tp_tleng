@@ -1,0 +1,7 @@
+[multiples "partidas"]
+[partida "numero 1"]
+[con "maximo niveiles sin capturas: 2"]
+1. a4! (Bxg5 h3++) Bxg5 {h3++ Bxg5!+ a3+ (asdasd)} 0-1
+
+[partida "numero 2"]
+1. a4! (Bxg5 h3++) Bxg5 2. a5 a6 

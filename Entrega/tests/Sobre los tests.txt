@@ -1,0 +1,20 @@
+Test1: Partida valida con dos movimientos y termina en victoria para blancas
+Salida esperada: "Maximo nivel sin captura: 0."
+
+Test2: Partida valida con dos movimientos, termina en empate
+Salida esperada: "Maximo nivel sin captura: 0."
+
+Test3: Partida valida con comentarios, maximo nivel de captura 3
+salida esperada: Maximo nivel sin captura: 3.
+
+Test4: varias partidas validas, con comentarios
+salida esperada: Maximo nivel sin captura: 2.
+
+Test5: varias partidas, una invalida
+salida esperada:  Error en 2, los numeros de jugada tienen que ser consecutivos.
+
+Test6: varias partidas, numero de casilla invalido
+salida esperada: Error en 56, Numero de casilla invalido.
+
+test7: una partida, jugador 2 se rinde antes de jugar
+salida esperada: Maximo nivel sin captura: 0.
