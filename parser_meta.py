@@ -5,7 +5,6 @@ from funciones_auxiliares import *
 import re
 
 # Tokens
-
 tokens = (
     'CARACTERES', 
     'LCORCHETE' , 'RCORCHETE',
@@ -15,35 +14,47 @@ tokens = (
     'LPAREN', 'RPAREN', 'LLLAVE', 'RLLAVE'
 )
 
-t_LCORCHETE = r'\['         #puede faltar el ] de un segmento de metadata 
-t_RCORCHETE = r'\]'         #pueden faltar las segundas comillas de un segmento de metadata
+t_LCORCHETE = r'\['         
+t_RCORCHETE = r'\]'         
 
 #CARACTERES se refiere a todos los caracteres que solo se usen para la metaData y comentarios
 t_CARACTERES = r'[^\s\[\]\"\d+\.\-a-hPNBRQK\/\+\?!xO\(\)\{\}]+' 
-t_COMILLA = r'\"'           # puede faltar el ESPACIO entre los strings de metadata
-t_ESPACIO = r'\ '           # cierre de un comentario exterior }), NUM o FILALETRA de un movimiento, puede faltar un PUNTO
-t_MENOS = r'-'              # Puede faltar una O de enroque, puede un NUM del Score o SLASH, 
-t_NUM = r'\d+'              # Puede faltar la FILALETRA de un movimiento, el ESPACIO al final de una jugada, pueden faltar un ESPACIO, un SLASH o un MENOS en un SCORE, pueden haber un caracer equivocado para PIEZA
-t_PUNTO = r'\.'             # puede faltar un NUM para el numero de jugada
-t_PIEZA = r'[P|N|B|R|Q|K]'  # puede faltar un ESPACIO antes de un movimiento
-t_FILALETRA = r'[a-h]'        # puede faltar un espacio antes de un movimiento
-t_SLASH = r'\/'             # puede faltar un NUM del SCORE
-t_MAS = r'\+'               # puede faltar un NUM para un movimiento
-t_PREGUNTA = r'\?'          # puede faltar un NUM para un movimiento
-t_EXCLAMACION = r'!'        # puede faltar un NUM para un movimiento
-t_EQUIS = r'x'              # puede faltar un ESPACIO para el movimiento
-t_O = r'O'                  # puede faltar un MENOS del Enroque o un ESPACIO para el Enroque
-t_LPAREN = r'\('            # puede faltar un ESPACIO para el comentario
-t_RPAREN = r'\)'            # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
-t_LLLAVE = r'\{'            # puede faltar un ESPACIO para el comentario
-t_RLLAVE = r'\}'            # puede faltar algun texto dentro del comentario o un cierre de algún comentario anidado
+t_COMILLA = r'\"'           
+t_ESPACIO = r'\ '           
+t_MENOS = r'-'              
+t_NUM = r'\d+'              
+t_PUNTO = r'\.'             
+t_PIEZA = r'[P|N|B|R|Q|K]'  
+t_FILALETRA = r'[a-h]'      
+t_SLASH = r'\/'             
+t_MAS = r'\+'               
+t_PREGUNTA = r'\?'          
+t_EXCLAMACION = r'!'        
+t_EQUIS = r'x'              
+t_O = r'O'                  
+t_LPAREN = r'\('            
+t_RPAREN = r'\)'            
+t_LLLAVE = r'\{'            
+t_RLLAVE = r'\}'            
 
+def t_newline(t):
+    r'\n+'
+    t.lexer.lineno += t.value.count("\n")
+
+def t_error(t):
+    print("Illegal character '%s'" % t.value[0])
+    raise LexError("Illegal character '%s'" % t.value)
+    t.lexer.skip(1)
+ 
+# Build the lexer
+lexer = lex.lex()
+
+# Clases para los atributos
 class Comentario:
     def __init__(self, nivel, maxNivel, jugada=-1):
         self.nivel = nivel
         self.nivelMaxSinCaptura = maxNivel
         self.jugada = jugada
-
 
 class Seguimiento:
     def __init__(self, captura):
@@ -67,38 +78,13 @@ class DescripcionDeError:
         self.value = value
         self.type = t
 
-def t_newline(t):
-    r'\n+'
-    t.lexer.lineno += t.value.count("\n")
-
-def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
-    raise LexError("Illegal character '%s'" % t.value)
-    t.lexer.skip(1)
- 
-# Build the lexer
-lexer = lex.lex()
-
 # Parsing rules
 precedence = ()
 
+# Regla principal de la gramatica
 def p_s(t):
     '''s : file'''
     t[0] = t[1]
-    print('''
-━━━━━-╮
-╰┃ ┣▇━▇
-┃ ┃  ╰━▅╮
-╰┳╯ ╰━━┳╯F A S I L I T O
-╰╮ ┳━━╯ E L T U T O R I A L
-▕▔▋ ╰╮╭━╮
-╱▔╲▋╰━┻┻╮╲╱▔▔▔╲
-▏  ▔▔▔▔▔▔▔  O O┃
-╲╱▔╲▂▂▂▂╱▔╲▂▂▂╱
-▏╳▕▇▇▕ ▏╳▕▇▇▕
-╲▂╱╲▂╱ ╲▂╱╲▂╱
-
-    ''')
     print('Maximo nivel sin captura: ', t[0].nivelMaxSinCaptura, '.', sep='')  
 
 def p_file(t):
@@ -113,7 +99,7 @@ def p_metadataInicio(t):
     '''metadataInicio : LCORCHETE metadata RCORCHETE metadataSegment partida'''
     t[0] = MaxLvlContainer(t[5].nivelMaxSinCaptura)
 
-#El segmento de metadata hace recursión hasta terminar en una partida
+# El segmento de metadata hace recursión hasta terminar en una partida
 def p_metadataSegment_MetaData(t):
     '''metadataSegment : LCORCHETE metadata RCORCHETE metadataSegment newline
                        | LCORCHETE metadata RCORCHETE metadataSegment
@@ -122,7 +108,7 @@ def p_metadataSegment_MetaData(t):
 def p_metadata_renglonMetaData(t):
     '''metadata : stringMeta1 ESPACIO COMILLA stringMeta2 COMILLA'''
 
-#Para parsear las cosas escritas usamos una recursion sobre los distintos tokens que se pueden encontrar
+# Para parsear las cosas escritas usamos una recursion sobre los distintos tokens que se pueden encontrar
 def p_stringMeta_escritoEnPrimerElementoMetadata(t):
     '''stringMeta1 : contenidoMeta1 stringMeta1
                    | contenidoMeta1 Empty'''
@@ -169,7 +155,7 @@ def p_caracteresnormales(t):
                           | O '''
     t[0] = t[1]
 
-#una partida empieza con una jugada y una siguiente jugada (la cual puede ser el score, indicando el final de la partida)
+# Una partida empieza con una jugada y una siguiente jugada (la cual puede ser el score, indicando el final de la partida)
 def p_partida(t): 
     '''partida : jugada sigjugada'''
     if t[2].numeroJugada == -1 :
@@ -179,12 +165,10 @@ def p_partida(t):
     else:
         if not (t[1].numeroJugada == 1 and (t[2].numeroJugada == 2 or t[2].numeroJugada == 0)):
             p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
-        t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) #El maximo nivel sin captura de una partida es el maximo de sus jugadas    
+        t[0] = MaxLvlContainer(maxNivel(t[1], t[2])) # El maximo nivel sin captura de una partida es el maximo de sus jugadas    
     
 def p_jugada(t):
     '''jugada : NUM PUNTO ESPACIO movimiento primerComentario posibleRendicion '''
-
-
     if t[6].nivel != -1 :
         t[0] = Jugada(t[1], maxNivel(t[5], t[6]))
     else:
@@ -213,7 +197,7 @@ def p_sigjugada(t):
     else:
         if t[1].numeroJugada != 0 and not (t[2].numeroJugada==-1 and t[1].numeroJugada < 0) and not (abs(t[2].numeroJugada) == t[1].numeroJugada + 1 or t[2].numeroJugada == 0):
             p_error(DescripcionDeError('Numero incorrecto', str(t[1].numeroJugada)))
-        #pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
+        # Pasamos el número de la jugada definida ahora como número de la siguiente jugada anterior para comparar con la anterior
         if t[2] == '':
             t[0] = Jugada(t[1].numeroJugada, t[1].nivelMaxSinCaptura)
         else:
@@ -221,8 +205,6 @@ def p_sigjugada(t):
         
 def p_movimiento(t):
     ''' movimiento : pieza casillas mate calidad ESPACIO '''
-    
-    
     numCasilla = t[2].numeroDeFila
     if numCasilla == 0 or numCasilla >= 9:
         p_error(DescripcionDeError('Numero de casilla invalido', str(numCasilla)))
@@ -287,7 +269,6 @@ def p_mate(t):
 def p_primerComentario(t):
     ''' primerComentario : comentario ESPACIO tresPuntos
                          | Empty Empty Empty '''
-
     if(t[1] == ''):
         t[0] = Comentario(0, 0, -1)
     else:
@@ -312,7 +293,6 @@ def p_segundoComentario(t):
 def p_comentario(t):
     ''' comentario : LPAREN contenidoComentario RPAREN 
                    | LLLAVE contenidoComentario RLLAVE '''
-    
     t[0] = Comentario(t[2].nivel, t[2].nivelMaxSinCaptura)
            
 def p_contenidoComentario(t):
@@ -340,7 +320,6 @@ def p_palabraComentario_escritoEnComentarios(t):
         t[0] = Comentario( t[3].nivel, t[3].nivelMaxSinCaptura)
     elif t[2] == '' :
         nivelSinCaptura = 0
-
         if t[1].nivelMaxSinCaptura != 0 :
             nivelSinCaptura = t[1].nivelMaxSinCaptura + 1
 
@@ -363,7 +342,6 @@ def p_contenidoStringComentario(t):
                                  | PIEZA
                                  | NUM'''
     t[0] = t[1]
-
 
 def p_seguimientoPieza(t):
     '''seguimientoPieza : FILALETRA seguimientoOrigenCasilla Empty
@@ -417,7 +395,6 @@ def p_seguimientoCaptura(t):
                           | PIEZA stringComentario Empty Empty
                           | NUM stringComentario Empty Empty
                           | Empty Empty Empty Empty '''
-
     if t[4] == '' :
         if t[1] == '' :
             t[0] = Seguimiento(False)
@@ -434,7 +411,6 @@ def p_seguimientoMovConCaptura(t):
     else : 
         t[0] = Seguimiento( False)
 
-
 def p_score_simplificado(t):
     '''score : NUM MENOS NUM'''
     t[0] = Jugada(0, 0)
@@ -449,13 +425,11 @@ def p_score_fraccion(t):
             
 def p_Empty(t):
     ''' Empty :'''
-    t[0] = ''   # El atributo de empty siempre es vacio('') eso nos evita problemas despues
+    t[0] = '' # El atributo de empty siempre es vacio('') eso nos evita problemas despues
     pass
 
 # Funcion que se ejecuta cuando el parser falla al reconocer una cadena
 def p_error(t):
-
-
     if t.value == '"': # Puede faltar el ESPACIO entre los strings de metadata
         errorMessage = f'Error en {t.type}, falta el espacio en la metadata.'
     elif t.value == ' ': # Cierre de un comentario exterior }), NUM o FILALETRA de un movimiento, puede faltar un PUNTO
